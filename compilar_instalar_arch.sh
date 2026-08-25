@@ -33,7 +33,7 @@ umask 022
 # também a raiz do projeto, eliminando a dependência da antiga subpasta scripts/.
 # Portanto, ele pode ser chamado de qualquer diretório com:
 #
-#   /caminho/fix-names-2.1.4/compilar_instalar_arch.sh
+#   /caminho/fix-names-2.1.5/compilar_instalar_arch.sh
 DIRETORIO_PROJETO=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 DIRETORIO_DESTINO=$DIRETORIO_PROJETO/pacotes/archlinux
 

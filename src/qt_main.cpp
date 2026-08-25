@@ -184,12 +184,20 @@ private:
                 });
         } catch (const std::exception &error) {
             result.stats.errors = 1;
+            /* MainWindow herda QObject::tr(const char *, ...). Dentro desta
+             * classe, uma chamada sem qualificação encontra primeiro a função
+             * do Qt e tenta passar Language como se fosse const char *. A
+             * qualificação do namespace garante que esta mensagem bilíngue
+             * use a função do núcleo fix-names, evitando a colisão de nomes. */
             result.messages.push_back(
-                tr(language, "ERRO inesperado na interface: ",
+                fixnames::tr(language, "ERRO inesperado na interface: ",
                              "Unexpected interface error: ") + error.what());
         } catch (...) {
             result.stats.errors = 1;
-            result.messages.push_back(tr(
+            /* A mesma qualificação explícita é necessária para o manipulador
+             * genérico: QMainWindow::tr() aceita texto como primeiro argumento,
+             * enquanto fixnames::tr() aceita o enum Language. */
+            result.messages.push_back(fixnames::tr(
                 language, "ERRO inesperado e não identificado na interface.",
                 "Unexpected unidentified interface error."));
         }
@@ -461,7 +469,9 @@ int main(int argc, char **argv)
     std::setlocale(LC_ALL, "");
     const Language language = detect_language();
     if (running_as_root()) {
-        std::cerr << tr(language,
+        /* Fora da classe não há ambiguidade, mas a qualificação mantém todas
+         * as chamadas deste arquivo imunes a novas colisões com QObject::tr. */
+        std::cerr << fixnames::tr(language,
                         "ERRO: o fix-names nunca pode ser executado como root. Use uma conta comum.\n",
                         "ERROR: fix-names must never run as root. Use a regular account.\n");
         return 77;

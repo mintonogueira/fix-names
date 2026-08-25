@@ -1,4 +1,4 @@
-# fix-names 2.1.4
+# fix-names 2.1.5
 
 `fix-names` é um renomeador em massa nativo para Linux, escrito em C++17 e
 projetado para trabalhar sem privilégios administrativos. O mesmo núcleo é
@@ -11,6 +11,18 @@ usado por quatro entradas independentes:
 
 As interfaces não aplicam estilos próprios. GTK e Qt carregam o tema, a
 paleta, as fontes e as caixas de arquivo configuradas no sistema.
+
+## Correção da versão 2.1.5
+
+A interface Qt agora qualifica as mensagens do núcleo como `fixnames::tr()`.
+Isso evita a colisão com a função estática `QMainWindow::tr(const char *, ...)`
+herdada pelo Qt. Na versão anterior, o compilador encontrava a função do Qt
+dentro de `MainWindow` e tentava converter o enum `fixnames::Language` em
+`const char *`, interrompendo a criação do executável `fix-names-qt`.
+
+Todo o restante do programa foi preservado, inclusive o progresso real nas
+quatro interfaces e os scripts separados que criam, validam, instalam e mantêm
+os pacotes em `pacotes/debian/` e `pacotes/archlinux/`.
 
 ## Garantias de segurança
 
@@ -150,13 +162,13 @@ O script compila, testa, cria e instala automaticamente um pacote nativo
 semelhante a:
 
 ```text
-pacotes/archlinux/fix-names-2.1.4-1-x86_64.pkg.tar.zst
+pacotes/archlinux/fix-names-2.1.5-1-x86_64.pkg.tar.zst
 ```
 
 O arquivo permanece na pasta `pacotes` e pode ser reinstalado posteriormente:
 
 ```bash
-sudo pacman -U pacotes/archlinux/fix-names-2.1.4-1-x86_64.pkg.tar.zst
+sudo pacman -U pacotes/archlinux/fix-names-2.1.5-1-x86_64.pkg.tar.zst
 ```
 
 ## Instalação no Debian
@@ -170,13 +182,13 @@ O script compila, testa, calcula automaticamente as dependências ELF, cria e
 instala automaticamente um pacote semelhante a:
 
 ```text
-pacotes/debian/fix-names_2.1.4-1_amd64.deb
+pacotes/debian/fix-names_2.1.5-1_amd64.deb
 ```
 
 Para reinstalar o arquivo já criado:
 
 ```bash
-sudo apt install ./pacotes/debian/fix-names_2.1.4-1_amd64.deb
+sudo apt install ./pacotes/debian/fix-names_2.1.5-1_amd64.deb
 ```
 
 Os dois instaladores devem ser executados por um usuário comum com `sudo`.

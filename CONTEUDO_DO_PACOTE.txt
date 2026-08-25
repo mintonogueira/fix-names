@@ -1,4 +1,4 @@
-FIX-NAMES 2.1.4 — CONTEÚDO DA ENTREGA
+FIX-NAMES 2.1.5 — CONTEÚDO DA ENTREGA
 =====================================
 
 Este pacote contém o projeto completo necessário para compilar, testar,
@@ -39,7 +39,7 @@ Os dois geradores estão diretamente na raiz e cada um incorpora sua própria
 verificação de estrutura, integridade SHA-256, sintaxe e modelos de pacote.
 Nenhum deles depende da antiga subpasta scripts/.
 
-CORREÇÃO DE PROGRESSO PRESERVADA NA VERSÃO 2.1.4
+CORREÇÕES PRESERVADAS E AJUSTE QT DA VERSÃO 2.1.5
 -------------------------------------
 
 CLI, ncurses, GTK e Qt exibem o percentual calculado pelo mesmo núcleo. As
@@ -47,14 +47,19 @@ GUIs desativam todos os controles e bloqueiam o fechamento durante a operação.
 Os dois empacotadores abrem cada GUI em tela virtual e executam uma simulação
 real antes de criar o pacote binário.
 
+Na interface Qt, as mensagens de exceção chamam explicitamente
+fixnames::tr(). Isso impede que QMainWindow::tr() oculte a função bilíngue do
+núcleo e corrige a falha de compilação que convertia fixnames::Language para
+const char *.
+
 PACOTES GERADOS
 ---------------
 
 Debian:
-  pacotes/debian/fix-names_2.1.4-1_<arquitetura>.deb
+  pacotes/debian/fix-names_2.1.5-1_<arquitetura>.deb
 
 Arch Linux:
-  pacotes/archlinux/fix-names-2.1.4-1-<arquitetura>.pkg.tar.zst
+  pacotes/archlinux/fix-names-2.1.5-1-<arquitetura>.pkg.tar.zst
 
 Cada script grava o pacote somente na pasta de sua distribuição, valida seus
 metadados e conteúdo, instala automaticamente esse mesmo arquivo pelo

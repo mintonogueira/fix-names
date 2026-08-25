@@ -20,7 +20,7 @@ jobs:
         run: pacman -Syu --noconfirm git sudo
 
       - name: Obter o projeto
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Preparar usuário sem privilégios
         run: |
@@ -39,9 +39,9 @@ jobs:
       - name: Confirmar o pacote instalado
         run: |
           pacman -Q fix-names
-          /usr/bin/fix-names --version
-          readelf -h /usr/bin/fix-names-qt | grep 'Type:.*DYN'
-          ! readelf -d /usr/bin/fix-names-qt | grep -q TEXTREL
+          test "$(sudo -H -u builder /usr/bin/fix-names --version)" = "fix-names 2.1.7"
+          LC_ALL=C readelf -h /usr/bin/fix-names-qt | grep 'Type:.*DYN'
+          ! LC_ALL=C readelf -d /usr/bin/fix-names-qt | grep -q TEXTREL
 
       - name: Disponibilizar o pacote Arch Linux
         uses: actions/upload-artifact@v4

@@ -17,7 +17,7 @@
 
 namespace fixnames {
 
-inline constexpr const char *VERSION = "2.1.1";
+inline constexpr const char *VERSION = "2.1.2";
 
 enum class Language {
     English,
@@ -101,6 +101,11 @@ using LogCallback = std::function<void(const std::string &)>;
  * contado antes da operação. As interfaces convertem essa razão em 0--100% e
  * escolhem como desenhar sua própria barra. */
 using ProgressCallback = std::function<void(std::size_t, std::size_t)>;
+
+/* Converte os contadores do callback em 0--100 sem multiplicar primeiro dois
+ * inteiros size_t. Essa função compartilhada evita estouro aritmético e
+ * garante que CLI, ncurses, GTK e Qt exibam exatamente o mesmo percentual. */
+int progress_percentage(std::size_t completed, std::size_t total) noexcept;
 
 /* Detecta pt* pelas variáveis LC_ALL, LC_MESSAGES e LANG, nessa ordem. */
 Language detect_language();

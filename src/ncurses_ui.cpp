@@ -340,9 +340,7 @@ RunResult run_with_progress(const RenamerOptions &options, Language language,
     return run_renamer(
         options, language, {},
         [&title, language](std::size_t completed, std::size_t total) {
-            const int percentage = total == 0
-                                       ? 100
-                                       : static_cast<int>((completed * 100) / total);
+            const int percentage = progress_percentage(completed, total);
             erase();
             int rows, columns;
             getmaxyx(stdscr, rows, columns);

@@ -11,7 +11,9 @@
 #include <QApplication>
 #include <QAbstractItemView>
 #include <QCheckBox>
+#include <QCloseEvent>
 #include <QComboBox>
+#include <QCursor>
 #include <QEventLoop>
 #include <QFileDialog>
 #include <QFormLayout>
@@ -36,6 +38,7 @@
 
 #include <algorithm>
 #include <clocale>
+#include <exception>
 #include <filesystem>
 #include <iostream>
 #include <string>
@@ -67,8 +70,31 @@ public:
         build_ui(initial_path);
     }
 
+    void run_self_test()
+    {
+        /* A simulação percorre o caminho atual sem modificar arquivos e testa
+         * o caminho completo da GUI: opções -> núcleo -> percentual -> log. */
+        case_combo->setCurrentIndex(static_cast<int>(CaseMode::Lowercase));
+        run(true);
+    }
+
+protected:
+    /* QApplication::processEvents() atualiza a barra durante a operação. Caso
+     * o gerenciador de janelas entregue um pedido de fechamento nesse período,
+     * ele é ignorado para que o objeto não desapareça enquanto o callback do
+     * núcleo ainda utiliza seus widgets. */
+    void closeEvent(QCloseEvent *event) override
+    {
+        if (operation_active) {
+            event->ignore();
+            return;
+        }
+        QMainWindow::closeEvent(event);
+    }
+
 private:
     Language language;
+    QWidget *controls_widget = nullptr;
     QLineEdit *path_edit = nullptr;
     QComboBox *case_combo = nullptr;
     QCheckBox *accents_check = nullptr;
@@ -89,6 +115,7 @@ private:
     QProgressBar *progress_bar = nullptr;
     QPlainTextEdit *log_view = nullptr;
     std::vector<fs::path> exclusions;
+    bool operation_active = false;
 
     RenamerOptions collect_options(bool dry_run) const
     {
@@ -125,27 +152,61 @@ private:
 
     void run(bool dry_run)
     {
+        /* Desabilitar o contêiner inteiro bloqueia navegação, edição das flags,
+         * exclusões e os dois botões. A barra e o log ficam fora dele para
+         * continuarem sendo redesenhados normalmente. */
+        operation_active = true;
+        controls_widget->setEnabled(false);
+        QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
         progress_bar->setValue(0);
         progress_bar->setFormat(qtr(language, "0% — preparando", "0% — preparing"));
 
         /* O callback usa os contadores do núcleo e processa somente eventos
          * de desenho/timer. Eventos de entrada ficam excluídos para impedir
          * uma segunda requisição enquanto a atual ainda está em andamento. */
-        const RunResult result = run_renamer(
-            collect_options(dry_run), language, {},
-            [this](std::size_t completed, std::size_t total) {
-                const int percentage = total == 0
-                                           ? 100
-                                           : static_cast<int>((completed * 100) / total);
-                progress_bar->setValue(percentage);
-                progress_bar->setFormat(
-                    QStringLiteral("%1% (%2/%3)")
-                        .arg(percentage)
-                        .arg(static_cast<qulonglong>(completed))
-                        .arg(static_cast<qulonglong>(total)));
-                QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
-            });
+        RunResult result;
+        bool received_progress = false;
+        try {
+            result = run_renamer(
+                collect_options(dry_run), language, {},
+                [this, &received_progress](std::size_t completed,
+                                           std::size_t total) {
+                    received_progress = true;
+                    const int percentage = progress_percentage(completed, total);
+                    progress_bar->setValue(percentage);
+                    progress_bar->setFormat(
+                        QStringLiteral("%1% (%2/%3)")
+                            .arg(percentage)
+                            .arg(static_cast<qulonglong>(completed))
+                            .arg(static_cast<qulonglong>(total)));
+                    QApplication::processEvents(
+                        QEventLoop::ExcludeUserInputEvents);
+                });
+        } catch (const std::exception &error) {
+            result.stats.errors = 1;
+            result.messages.push_back(
+                tr(language, "ERRO inesperado na interface: ",
+                             "Unexpected interface error: ") + error.what());
+        } catch (...) {
+            result.stats.errors = 1;
+            result.messages.push_back(tr(
+                language, "ERRO inesperado e não identificado na interface.",
+                "Unexpected unidentified interface error."));
+        }
+
+        /* Validações que falham antes da enumeração não possuem contadores,
+         * mas a requisição já terminou. O relatório informa o erro e a barra
+         * não permanece incorretamente parada em 0%. */
+        if (!received_progress) {
+            progress_bar->setValue(100);
+            progress_bar->setFormat(qtr(
+                language, "100% — requisição concluída",
+                "100% — request completed"));
+        }
         show_result(result);
+        QApplication::restoreOverrideCursor();
+        controls_widget->setEnabled(true);
+        operation_active = false;
     }
 
     void browse_folder()
@@ -203,6 +264,13 @@ private:
             central);
         outer->addWidget(title);
 
+        /* Um contêiner único permite congelar todos os controles mutáveis sem
+         * também desativar a barra percentual ou o relatório. */
+        controls_widget = new QWidget(central);
+        QVBoxLayout *controls_layout = new QVBoxLayout(controls_widget);
+        controls_layout->setContentsMargins(0, 0, 0, 0);
+        outer->addWidget(controls_widget, 1);
+
         QHBoxLayout *path_layout = new QHBoxLayout;
         path_layout->addWidget(new QLabel(qtr(language, "Pasta:", "Folder:"), central));
         path_edit = new QLineEdit(initial_path, central);
@@ -210,7 +278,7 @@ private:
             qtr(language, "Navegar...", "Browse..."), central);
         path_layout->addWidget(path_edit, 1);
         path_layout->addWidget(browse_button);
-        outer->addLayout(path_layout);
+        controls_layout->addLayout(path_layout);
         connect(browse_button, &QPushButton::clicked, this,
                 [this] { browse_folder(); });
 
@@ -352,7 +420,7 @@ private:
         options_layout->addStretch();
 
         scroll->setWidget(options_widget);
-        outer->addWidget(scroll, 1);
+        controls_layout->addWidget(scroll, 1);
 
         QHBoxLayout *actions = new QHBoxLayout;
         QPushButton *preview_button = new QPushButton(
@@ -362,7 +430,7 @@ private:
         actions->addWidget(preview_button);
         actions->addWidget(apply_button);
         actions->addStretch();
-        outer->addLayout(actions);
+        controls_layout->addLayout(actions);
         connect(preview_button, &QPushButton::clicked, this, [this] { run(true); });
         connect(apply_button, &QPushButton::clicked, this,
                 [this] { confirm_apply(); });
@@ -416,7 +484,8 @@ int main(int argc, char **argv)
     MainWindow window(initial_path, language);
     window.show();
     if (self_test)
-        QTimer::singleShot(0, &application, [&application] {
+        QTimer::singleShot(0, &application, [&application, &window] {
+            window.run_self_test();
             application.quit();
         });
     return application.exec();

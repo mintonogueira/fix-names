@@ -1,4 +1,4 @@
-# fix-names 2.1.1
+# fix-names 2.1.2
 
 `fix-names` é um renomeador em massa nativo para Linux, escrito em C++17 e
 projetado para trabalhar sem privilégios administrativos. O mesmo núcleo é
@@ -112,7 +112,10 @@ Ncurses, GTK e Qt oferecem navegador de pastas, controles para todas as
 transformações, recursão opcional, proteção de extensões, lista de arquivos
 excluídos, pré-visualização e confirmação antes da aplicação. CLI, ncurses,
 GTK e Qt exibem uma barra de progresso baseada na quantidade real de itens,
-com percentual e contador `concluídos/total`.
+com percentual e contador `concluídos/total`. Enquanto uma requisição está em
+andamento, as duas GUIs bloqueiam todos os controles e recusam o fechamento da
+janela; isso impede uma segunda operação e mantém o estado da barra válido até
+o relatório final.
 
 ## Instalação automática
 
@@ -146,13 +149,13 @@ chmod +x scripts/compilar_instalar_arch.sh
 O script compila, testa, cria e instala um pacote nativo semelhante a:
 
 ```text
-pacotes/fix-names-2.1.1-1-x86_64.pkg.tar.zst
+pacotes/fix-names-2.1.2-1-x86_64.pkg.tar.zst
 ```
 
 O arquivo permanece na pasta `pacotes` e pode ser reinstalado posteriormente:
 
 ```bash
-sudo pacman -U pacotes/fix-names-2.1.1-1-x86_64.pkg.tar.zst
+sudo pacman -U pacotes/fix-names-2.1.2-1-x86_64.pkg.tar.zst
 ```
 
 ## Instalação no Debian
@@ -166,13 +169,13 @@ O script compila, testa, calcula automaticamente as dependências ELF, cria e
 instala um pacote semelhante a:
 
 ```text
-pacotes/fix-names_2.1.1-1_amd64.deb
+pacotes/fix-names_2.1.2-1_amd64.deb
 ```
 
 Para reinstalar o arquivo já criado:
 
 ```bash
-sudo apt install ./pacotes/fix-names_2.1.1-1_amd64.deb
+sudo apt install ./pacotes/fix-names_2.1.2-1_amd64.deb
 ```
 
 Os dois instaladores devem ser executados por um usuário comum com `sudo`.

@@ -156,15 +156,19 @@ done
 }
 NUMERO_DISPLAY=$(sed -n '1p' "$ARQUIVO_DISPLAY")
 STATUS_GUI=0
+# O backend X11 garante que o teste não tente reutilizar uma sessão Wayland do
+# usuário. O limite de vinte segundos transforma qualquer travamento de abertura
+# ou encerramento em falha clara, antes que um pacote defeituoso seja criado.
 (
     cd "$DIRETORIO_PROJETO"
-    DISPLAY=":$NUMERO_DISPLAY" ./build/fix-names-gtk --self-test
+    DISPLAY=":$NUMERO_DISPLAY" GDK_BACKEND=x11 \
+        timeout 20s ./build/fix-names-gtk --self-test
 ) || STATUS_GUI=$?
 if [ "$STATUS_GUI" -eq 0 ]; then
     (
         cd "$DIRETORIO_PROJETO"
         DISPLAY=":$NUMERO_DISPLAY" QT_QPA_PLATFORM=xcb \
-            ./build/fix-names-qt --self-test
+            timeout 20s ./build/fix-names-qt --self-test
     ) || STATUS_GUI=$?
 fi
 kill "$PID_XVFB" 2>/dev/null || :

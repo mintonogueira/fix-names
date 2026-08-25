@@ -1,4 +1,4 @@
-.TH FIX-NAMES 1 "August 2026" "fix-names 2.1.1" "User Commands"
+.TH FIX-NAMES 1 "August 2026" "fix-names 2.1.2" "User Commands"
 .SH NAME
 fix-names \- renomeador em massa seguro com CLI, ncurses, GTK e Qt
 .SH SYNOPSIS
@@ -13,6 +13,8 @@ ficam protegidas e a recursão fica desativada por padrão. O programa recusa
 execução como root e nunca sobrescreve um destino existente.
 Durante a simulação e a aplicação, exibe uma barra de progresso percentual
 calculada sobre a quantidade real de itens da requisição.
+As interfaces GTK e Qt desativam todos os controles e impedem o fechamento da
+janela até que a requisição e sua barra de progresso sejam concluídas.
 .SH OPTIONS
 .TP
 .BR \-u ", " \-\-uppercase

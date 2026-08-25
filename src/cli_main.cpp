@@ -175,9 +175,7 @@ bool confirm(Language language)
 void print_progress(std::size_t completed, std::size_t total,
                     Language language, int &last_percentage)
 {
-    const int percentage = total == 0
-                               ? 100
-                               : static_cast<int>((completed * 100) / total);
+    const int percentage = progress_percentage(completed, total);
     if (percentage == last_percentage)
         return;
     last_percentage = percentage;

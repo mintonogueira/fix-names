@@ -13,6 +13,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <unistd.h>
@@ -49,6 +50,18 @@ fs::path make_test_directory()
 
 void pure_transform_tests()
 {
+    /* O percentual é calculado por uma única função usada pelas quatro
+     * interfaces. Os valores máximos verificam especificamente que não existe
+     * o antigo risco de estouro em completed * 100. */
+    const std::size_t maximum = std::numeric_limits<std::size_t>::max();
+    check(progress_percentage(0, maximum) == 0, "percentual inicial inválido");
+    check(progress_percentage(maximum / 2, maximum) == 49,
+          "percentual intermediário inválido");
+    check(progress_percentage(maximum, maximum) == 100,
+          "percentual final inválido");
+    check(progress_percentage(maximum, 0) == 100,
+          "requisição sem itens deve ser concluída");
+
     RenamerOptions options;
     options.case_mode = CaseMode::Uppercase;
     options.remove_accents = true;

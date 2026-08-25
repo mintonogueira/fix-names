@@ -523,7 +523,15 @@ void report_progress(ExecutionContext &context)
 
 void advance_progress(ExecutionContext &context, std::size_t amount = 1)
 {
-    context.progress_current += amount;
+    /* Soma saturada: uma alteração concorrente na árvore pode fazer a segunda
+     * passagem observar mais itens do que a contagem inicial. Saturar no total
+     * impede tanto percentual acima de 100 quanto estouro de size_t. */
+    if (amount >= context.progress_total -
+                      std::min(context.progress_current, context.progress_total)) {
+        context.progress_current = context.progress_total;
+    } else {
+        context.progress_current += amount;
+    }
     report_progress(context);
 }
 
@@ -877,6 +885,31 @@ std::string tr(Language language, const char *pt_br, const char *english)
 bool running_as_root()
 {
     return ::geteuid() == 0;
+}
+
+int progress_percentage(std::size_t completed, std::size_t total) noexcept
+{
+    if (total == 0)
+        return 100;
+
+    /* Encontra o maior percentual cujo limiar já foi alcançado. O limiar
+     * ceil(percentual * total / 100) é decomposto em quociente e resto; assim
+     * nenhuma multiplicação pode ultrapassar total, mesmo no maior size_t.
+     * O laço tem no máximo 101 iterações, custo irrelevante perto de uma
+     * operação de sistema de arquivos e resultado inteiro exato. */
+    const std::size_t bounded = std::min(completed, total);
+    const std::size_t quotient = total / 100;
+    const std::size_t remainder = total % 100;
+    for (int percentage = 100; percentage >= 0; --percentage) {
+        const std::size_t factor = static_cast<std::size_t>(percentage);
+        const std::size_t remainder_product = factor * remainder;
+        const std::size_t rounded_remainder =
+            remainder_product / 100 + (remainder_product % 100 != 0 ? 1 : 0);
+        const std::size_t threshold = factor * quotient + rounded_remainder;
+        if (bounded >= threshold)
+            return percentage;
+    }
+    return 0;
 }
 
 bool validate_options(const RenamerOptions &options, std::string &error,

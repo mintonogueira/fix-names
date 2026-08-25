@@ -109,8 +109,12 @@ grep -q '@SOURCE_SHA256@' "$DIRETORIO_PROJETO/packaging/arch/PKGBUILD.in" ||
     erro 'marcador @SOURCE_SHA256@ ausente do PKGBUILD.in.'
 grep -q '@VERSION@' "$DIRETORIO_PROJETO/packaging/debian/control.in" ||
     erro 'marcador @VERSION@ ausente do control.in.'
+grep -q '@ARCHITECTURE@' "$DIRETORIO_PROJETO/packaging/debian/control.in" ||
+    erro 'marcador @ARCHITECTURE@ ausente do control.in.'
 grep -q '@DEPENDS@' "$DIRETORIO_PROJETO/packaging/debian/control.in" ||
     erro 'marcador @DEPENDS@ ausente do control.in.'
+grep -q '@INSTALLED_SIZE@' "$DIRETORIO_PROJETO/packaging/debian/control.in" ||
+    erro 'marcador @INSTALLED_SIZE@ ausente do control.in.'
 
 # Um arquivo chamado .png pode ter sido truncado durante a cópia. Os oito
 # primeiros bytes de todo PNG válido são fixos. dd, od e tr pertencem ao

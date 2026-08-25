@@ -25,6 +25,7 @@ namespace {
 struct GtkState {
     Language language = Language::English;
     GtkWidget *window = nullptr;
+    GtkWidget *controls_box = nullptr;
     GtkWidget *path_entry = nullptr;
     GtkWidget *case_combo = nullptr;
     GtkWidget *accents_check = nullptr;
@@ -47,6 +48,7 @@ struct GtkState {
     GtkWidget *apply_button = nullptr;
     GtkWidget *log_view = nullptr;
     std::vector<fs::path> exclusions;
+    bool operation_active = false;
 };
 
 struct ActivationData {
@@ -144,9 +146,13 @@ RenamerOptions collect_options(GtkState *state, bool dry_run)
 
 void run_operation(GtkState *state, bool dry_run)
 {
+    /* O processamento é síncrono para que nenhuma segunda operação altere o
+     * mesmo diretório ao mesmo tempo. Todos os controles ficam dentro deste
+     * contêiner; a barra e o relatório permanecem ativos e visíveis. */
     const RenamerOptions options = collect_options(state, dry_run);
-    gtk_widget_set_sensitive(state->preview_button, FALSE);
-    gtk_widget_set_sensitive(state->apply_button, FALSE);
+    state->operation_active = true;
+    gtk_widget_set_sensitive(state->controls_box, FALSE);
+    gtk_window_set_deletable(GTK_WINDOW(state->window), FALSE);
     gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(state->progress_bar), 0.0);
     gtk_progress_bar_set_text(
         GTK_PROGRESS_BAR(state->progress_bar),
@@ -155,12 +161,12 @@ void run_operation(GtkState *state, bool dry_run)
     /* O núcleo permanece independente de GTK. Este callback converte os
      * contadores reais em fração/percentual e permite que o GTK redesenhe a
      * janela sem aceitar novos cliques durante a operação. */
+    bool received_progress = false;
     const RunResult result = run_renamer(
         options, state->language, {},
-        [state](std::size_t completed, std::size_t total) {
-            const int percentage = total == 0
-                                       ? 100
-                                       : static_cast<int>((completed * 100) / total);
+        [state, &received_progress](std::size_t completed, std::size_t total) {
+            received_progress = true;
+            const int percentage = progress_percentage(completed, total);
             const double fraction = static_cast<double>(percentage) / 100.0;
             gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(state->progress_bar),
                                           fraction);
@@ -172,9 +178,31 @@ void run_operation(GtkState *state, bool dry_run)
             while (g_main_context_pending(nullptr))
                 g_main_context_iteration(nullptr, FALSE);
         });
+
+    /* Uma falha de validação termina antes de o núcleo enumerar arquivos e,
+     * portanto, não produz contadores. Ainda assim a requisição terminou: a
+     * barra fecha em 100% e o motivo aparece no relatório abaixo. */
+    if (!received_progress) {
+        gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(state->progress_bar), 1.0);
+        gtk_progress_bar_set_text(
+            GTK_PROGRESS_BAR(state->progress_bar),
+            text(state->language, "100% — requisição concluída",
+                                  "100% — request completed"));
+    }
     set_log(state, result.messages);
-    gtk_widget_set_sensitive(state->preview_button, TRUE);
-    gtk_widget_set_sensitive(state->apply_button, TRUE);
+    state->operation_active = false;
+    gtk_window_set_deletable(GTK_WINDOW(state->window), TRUE);
+    gtk_widget_set_sensitive(state->controls_box, TRUE);
+}
+
+/* g_main_context_iteration() mantém a pintura da janela fluida durante a
+ * operação e também pode entregar um pedido do gerenciador de janelas. O
+ * fechamento é recusado enquanto callbacks ainda usam GtkState, eliminando a
+ * possibilidade de liberar o estado no meio da renomeação. */
+gboolean on_close_request(GtkWindow *, gpointer data)
+{
+    const auto *state = static_cast<GtkState *>(data);
+    return state->operation_active ? TRUE : FALSE;
 }
 
 void on_folder_response(GtkNativeDialog *dialog, int response, gpointer data)
@@ -338,6 +366,8 @@ void on_activate(GtkApplication *application, gpointer user_data)
                            [](gpointer pointer) {
                                delete static_cast<GtkState *>(pointer);
                            });
+    g_signal_connect(state->window, "close-request",
+                     G_CALLBACK(on_close_request), state);
 
     GtkWidget *outer = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
     set_margins(outer, 12);
@@ -348,6 +378,13 @@ void on_activate(GtkApplication *application, gpointer user_data)
     gtk_label_set_markup(GTK_LABEL(title), markup.c_str());
     gtk_label_set_xalign(GTK_LABEL(title), 0.0F);
     gtk_box_append(GTK_BOX(outer), title);
+
+    /* Todos os controles capazes de iniciar uma ação ou modificar opções são
+     * agrupados aqui. Desabilitar um único contêiner durante a execução também
+     * cobre navegar, editar a lista de exclusões e alterar qualquer flag. */
+    state->controls_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+    gtk_widget_set_vexpand(state->controls_box, TRUE);
+    gtk_box_append(GTK_BOX(outer), state->controls_box);
 
     GtkWidget *path_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
     state->path_entry = gtk_entry_new();
@@ -361,7 +398,7 @@ void on_activate(GtkApplication *application, gpointer user_data)
                                                       "Pasta:", "Folder:")));
     gtk_box_append(GTK_BOX(path_box), state->path_entry);
     gtk_box_append(GTK_BOX(path_box), browse);
-    gtk_box_append(GTK_BOX(outer), path_box);
+    gtk_box_append(GTK_BOX(state->controls_box), path_box);
 
     GtkWidget *scroll_options = gtk_scrolled_window_new();
     gtk_widget_set_vexpand(scroll_options, TRUE);
@@ -370,7 +407,7 @@ void on_activate(GtkApplication *application, gpointer user_data)
     GtkWidget *options_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
     set_margins(options_box, 4);
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroll_options), options_box);
-    gtk_box_append(GTK_BOX(outer), scroll_options);
+    gtk_box_append(GTK_BOX(state->controls_box), scroll_options);
 
     GtkWidget *grid_widget = gtk_grid_new();
     GtkGrid *grid = GTK_GRID(grid_widget);
@@ -508,7 +545,7 @@ void on_activate(GtkApplication *application, gpointer user_data)
     g_signal_connect(state->apply_button, "clicked", G_CALLBACK(on_apply), state);
     gtk_box_append(GTK_BOX(action_box), state->preview_button);
     gtk_box_append(GTK_BOX(action_box), state->apply_button);
-    gtk_box_append(GTK_BOX(outer), action_box);
+    gtk_box_append(GTK_BOX(state->controls_box), action_box);
 
     state->progress_bar = gtk_progress_bar_new();
     gtk_progress_bar_set_show_text(GTK_PROGRESS_BAR(state->progress_bar), TRUE);
@@ -530,10 +567,20 @@ void on_activate(GtkApplication *application, gpointer user_data)
                       "Configure options and use Preview before applying."));
     gtk_window_present(GTK_WINDOW(state->window));
     if (activation->self_test) {
+        /* O autoteste não se limita a abrir a janela: ativa uma transformação
+         * e executa uma simulação segura no diretório atual. Assim o instalador
+         * valida coleta de opções, bloqueio dos controles, callback percentual,
+         * atualização do relatório e encerramento da GUI sem renomear nada. */
         g_idle_add([](gpointer pointer) -> gboolean {
-            g_application_quit(G_APPLICATION(pointer));
+            auto *test_state = static_cast<GtkState *>(pointer);
+            gtk_combo_box_set_active(GTK_COMBO_BOX(test_state->case_combo),
+                                     static_cast<int>(CaseMode::Lowercase));
+            run_operation(test_state, true);
+            GtkApplication *test_application = gtk_window_get_application(
+                GTK_WINDOW(test_state->window));
+            g_application_quit(G_APPLICATION(test_application));
             return G_SOURCE_REMOVE;
-        }, application);
+        }, state);
     }
 }
 

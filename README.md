@@ -1,8 +1,9 @@
 # fix-names 2.1.6
 
 `fix-names` é um renomeador em massa nativo para Linux, escrito em C++17 e
-projetado para trabalhar sem privilégios administrativos. O mesmo núcleo é
-usado por quatro entradas independentes:
+projetado para alterar nomes com pré-visualização, detecção de conflitos e sem
+sobrescrever arquivos existentes. O programa trabalha sem privilégios
+administrativos e compartilha o mesmo núcleo entre quatro entradas:
 
 - `fix-names`: CLI e interface ncurses;
 - `fix-names-gtk`: GUI GTK 4, indicada para GNOME, XFCE, Cinnamon e MATE;
@@ -11,6 +12,31 @@ usado por quatro entradas independentes:
 
 As interfaces não aplicam estilos próprios. GTK e Qt carregam o tema, a
 paleta, as fontes e as caixas de arquivo configuradas no sistema.
+
+## Estado do projeto
+
+| Item | Estado |
+| --- | --- |
+| Versão atual | `2.1.6` |
+| Debian | programa, pacote `.deb`, instalação e atualização testados |
+| Arch Linux | empacotador incluído, mas a vinculação Qt falhou no teste real descrito abaixo |
+| Linguagem | C++17 e Shell POSIX |
+| Interfaces | CLI/ncurses, GTK 4, Qt 6 e seletor automático |
+| Licença | [GNU GPL v3](LICENSE) |
+
+No Arch Linux, a árvore `2.1.6` pode falhar ao vincular `fix-names-qt` quando
+as flags do `makepkg` ativam LTO e os objetos compartilhados não usam um modelo
+PIC/PIE consistente. A mensagem observada contém
+`copy relocation against protected symbol _ZTI7QWidget@@Qt_6`. Até que essa
+correção gere uma nova versão, o suporte Arch deve ser considerado pendente;
+o Debian permanece como plataforma confirmada.
+
+## Versões publicadas
+
+O histórico preserva uma revisão independente para cada versão, de `2.0.0` a
+`2.1.6`. Os links, hashes dos pacotes-fonte originais e o estado de cada
+entrega estão em [`VERSOES.md`](VERSOES.md). O histórico funcional resumido
+continua em [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Documentação completa
 

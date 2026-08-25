@@ -103,6 +103,10 @@ Após instalar, o script confere separadamente:
 
 ## Empacotador Arch Linux
 
+> **Estado da versão 2.1.6:** o fluxo está implementado, mas o teste em Arch
+> real falhou ao vincular o executável Qt com as flags LTO do `makepkg`. O
+> pacote Arch desta versão ainda não deve ser considerado validado.
+
 Dependências instaladas automaticamente:
 
 ```text

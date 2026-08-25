@@ -20,6 +20,7 @@ ARQUIVOS PRINCIPAIS
   README.md                             apresentação e início rápido
   DOCUMENTACAO.md                       índice da documentação oficial
   CHANGELOG.md                          histórico consolidado de versões
+  VERSOES.md                            referências Git e hashes das entregas
   docs/MANUAL_DO_USUARIO.md             operação e fluxos seguros
   docs/REFERENCIA_CLI.md                flags, sintaxe e códigos de saída
   docs/INTERFACES.md                    CLI, ncurses, GTK, Qt e seletor

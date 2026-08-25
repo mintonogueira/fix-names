@@ -85,6 +85,22 @@ classe Qt chamam explicitamente `fixnames::tr()`, sem colisão com
 `QObject::tr()`. Extraia a versão `2.1.6` em uma pasta nova e não misture fontes
 de versões diferentes.
 
+## Arch: `copy relocation` envolvendo `QWidget`
+
+Na versão `2.1.6`, o teste real do gerador Arch pode chegar à vinculação de
+`fix-names-qt` e terminar com uma mensagem semelhante a:
+
+```text
+copy relocation against protected symbol `_ZTI7QWidget@@Qt_6`
+```
+
+Esse erro é diferente da colisão com `tr()` corrigida em `2.1.5`. Ele ocorre
+na combinação das flags LTO/PIC/PIE usadas durante a compilação e a vinculação
+contra o Qt 6 do Arch. Como o pacote não termina de ser criado, nada deve ser
+instalado por essa execução. Preserve a saída completa e aguarde uma versão que
+uniformize essas flags em todos os objetos compartilhados; não desative as
+proteções do linker nem force a instalação de um pacote incompleto.
+
 ## O script procura `scripts/verificar_projeto.sh`
 
 Essa estrutura pertence a uma entrega antiga. Na versão `2.1.6`, os geradores

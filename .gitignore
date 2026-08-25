@@ -1,0 +1,8 @@
+/build/
+/pacotes/debian/*
+/pacotes/archlinux/*
+!/pacotes/debian/.gitkeep
+!/pacotes/archlinux/.gitkeep
+*.deb
+*.pkg.tar.zst
+*.tar.gz

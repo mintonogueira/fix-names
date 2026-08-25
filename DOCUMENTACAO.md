@@ -41,6 +41,7 @@ O núcleo compartilhado pode:
 7. [Desenvolvimento e testes](docs/DESENVOLVIMENTO_E_TESTES.md)
 8. [Solução de problemas](docs/SOLUCAO_DE_PROBLEMAS.md)
 9. [Histórico de versões](CHANGELOG.md)
+10. [Referências e hashes das versões publicadas](VERSOES.md)
 
 ## Regras fundamentais
 
@@ -76,10 +77,12 @@ processado porque diretórios não possuem uma extensão protegida pelo núcleo.
 
 - Programa e instalador Debian: testados e confirmados como funcionais.
 - Atualização/reinstalação Debian: corrigida e confirmada na versão `2.1.6`.
-- Compilação Qt: corrigida desde a versão `2.1.5`.
+- A colisão entre `fixnames::tr()` e `QMainWindow::tr()` foi corrigida na
+  versão `2.1.5`.
 - Barra de progresso: ativa nas quatro interfaces.
-- Empacotador Arch Linux: implementado e validado estruturalmente; o teste em
-  uma instalação Arch real ainda não foi confirmado pelo usuário.
+- Empacotador Arch Linux: implementado e validado estruturalmente, mas o teste
+  real da versão `2.1.6` falhou na vinculação de `fix-names-qt` com LTO. O
+  suporte Arch permanece pendente de uma nova correção e nova validação.
 
 ## Plataforma e compatibilidade
 

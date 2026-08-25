@@ -37,7 +37,7 @@ ALL_BINARIES = $(BUILD_DIR)/fix-names $(BUILD_DIR)/fix-names-gtk $(BUILD_DIR)/fi
 # Manter esta lista explícita garante que os dois pacotes nativos recebam os
 # mesmos capítulos e evita que um arquivo temporário seja incluído por um glob
 # amplo. Os caminhos relativos são preservados sob share/doc/fix-names/.
-DOC_FILES = README.md DOCUMENTACAO.md CHANGELOG.md \
+DOC_FILES = README.md DOCUMENTACAO.md CHANGELOG.md VERSOES.md \
 	docs/MANUAL_DO_USUARIO.md docs/REFERENCIA_CLI.md docs/INTERFACES.md \
 	docs/ARQUITETURA_E_SEGURANCA.md docs/REFERENCIA_DO_NUCLEO.md \
 	docs/COMPILACAO_E_EMPACOTAMENTO.md \

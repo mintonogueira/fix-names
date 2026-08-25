@@ -1,5 +1,9 @@
 # Histórico do fix-names
 
+> As versões `2.0.0` a `2.1.6` estão preservadas no histórico do repositório.
+> Consulte [`VERSOES.md`](VERSOES.md) para referências e hashes dos arquivos
+> originais.
+
 ## 2.1.6 — atualização e resolução de versão
 
 - Força reinstalação do pacote local no Debian e no Arch.
@@ -9,6 +13,9 @@
   que ocultem os executáveis do pacote.
 - Faz o seletor gráfico procurar GTK/Qt na mesma pasta do próprio seletor.
 - Usa caminhos absolutos `/usr/bin` no arquivo `.desktop`.
+- Situação conhecida posterior à entrega: o gerador Arch chegou à etapa de
+  vinculação Qt, mas falhou com uma relocação protegida de `QWidget` ao usar as
+  flags LTO do `makepkg`. O Debian foi testado e aprovado.
 
 ## 2.1.5 — correção da interface Qt
 
@@ -48,3 +55,9 @@
 - Adiciona transformação por flags, exclusões, recursão opcional e proteção de
   extensões.
 - Implementa renomeação atômica sem sobrescrita e detecção de colisões.
+
+## 2.0.0 — base multinterface
+
+- Consolida o núcleo C++17 e as interfaces CLI/ncurses, GTK 4 e Qt 6.
+- Inclui ícone, entrada de menu, página de manual, testes e scripts iniciais
+  para Debian e Arch Linux.

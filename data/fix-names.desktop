@@ -1,0 +1,25 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=fix-names
+Name[pt_BR]=fix-names
+Comment=Safely rename files in bulk
+Comment[pt_BR]=Renomeie arquivos em massa com segurança
+Exec=fix-names-gui %f
+TryExec=fix-names-gui
+Icon=fix-names
+Terminal=false
+Categories=Utility;FileTools;
+MimeType=inode/directory;
+StartupNotify=true
+Actions=GTK;Qt;
+
+[Desktop Action GTK]
+Name=Open with GTK
+Name[pt_BR]=Abrir com GTK
+Exec=fix-names-gui --gtk
+
+[Desktop Action Qt]
+Name=Open with Qt
+Name[pt_BR]=Abrir com Qt
+Exec=fix-names-gui --qt

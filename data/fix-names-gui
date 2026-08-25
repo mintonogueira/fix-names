@@ -1,0 +1,45 @@
+#!/bin/sh
+
+# Seleciona a GUI mais integrada ao ambiente gráfico atual. O núcleo continua
+# sendo exatamente o mesmo; somente o conjunto de widgets muda.
+
+set -eu
+
+if [ "$(id -u)" -eq 0 ]; then
+    printf '%s\n' 'ERRO: o fix-names nunca pode ser executado como root.' >&2
+    exit 77
+fi
+
+INTERFACE=
+case ${1-} in
+    --gtk)
+        INTERFACE=gtk
+        shift
+        ;;
+    --qt)
+        INTERFACE=qt
+        shift
+        ;;
+esac
+
+if [ -z "$INTERFACE" ]; then
+    AMBIENTE=$(printf '%s' "${XDG_CURRENT_DESKTOP-}:${DESKTOP_SESSION-}" |
+        tr '[:upper:]' '[:lower:]')
+    case $AMBIENTE in
+        *kde*|*plasma*|*lxqt*) INTERFACE=qt ;;
+        *)                     INTERFACE=gtk ;;
+    esac
+fi
+
+if [ "$INTERFACE" = qt ] && command -v fix-names-qt >/dev/null 2>&1; then
+    exec fix-names-qt "$@"
+fi
+if command -v fix-names-gtk >/dev/null 2>&1; then
+    exec fix-names-gtk "$@"
+fi
+if command -v fix-names-qt >/dev/null 2>&1; then
+    exec fix-names-qt "$@"
+fi
+
+printf '%s\n' 'ERRO: nenhuma interface gráfica do fix-names foi encontrada.' >&2
+exit 1

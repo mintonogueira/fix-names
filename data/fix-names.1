@@ -1,0 +1,80 @@
+.TH FIX-NAMES 1 "August 2026" "fix-names 2.0.0" "User Commands"
+.SH NAME
+fix-names \- renomeador em massa seguro com CLI, ncurses, GTK e Qt
+.SH SYNOPSIS
+.B fix-names
+.br
+.B fix-names
+.RI [ opções ] " [caminho]"
+.SH DESCRIPTION
+Sem argumentos, abre a interface ncurses. Com opções, renomeia o conteúdo do
+caminho informado. Nenhuma transformação é ativada implicitamente. Extensões
+ficam protegidas e a recursão fica desativada por padrão. O programa recusa
+execução como root e nunca sobrescreve um destino existente.
+.SH OPTIONS
+.TP
+.BR \-u ", " \-\-uppercase
+Converte os nomes para maiúsculas.
+.TP
+.BR \-l ", " \-\-lowercase
+Converte os nomes para minúsculas.
+.TP
+.BR \-c ", " \-\-capitalize
+Coloca a inicial de cada palavra em maiúscula.
+.TP
+.BR \-a ", " \-\-remove-accents
+Remove acentos latinos.
+.TP
+.BR \-s ", " \-\-spaces " caractere
+Substitui espaços pelo caractere informado.
+.TP
+.BR \-\-underscores " caractere
+Substitui sublinhados pelo caractere informado.
+.TP
+.BR \-f ", " \-\-find " texto
+Localiza texto literal; deve ser usada com --replace.
+.TP
+.BR \-p ", " \-\-replace " texto
+Texto substituto; deve ser usada com --find.
+.TP
+.BR \-\-insert " texto
+Insere texto na posição definida por --position.
+.TP
+.BR \-\-overwrite " texto
+Sobrescreve caracteres na posição definida por --position.
+.TP
+.BR \-\-position " n
+Define a posição em caracteres.
+.TP
+.BR \-\-from-end
+Conta a posição a partir do fim.
+.TP
+.BR \-r ", " \-\-recursive
+Processa também subpastas e seus conteúdos.
+.TP
+.BR \-\-include-extension
+Permite que as transformações alcancem extensões.
+.TP
+.BR \-x ", " \-\-exclude " caminho
+Exclui um item. Pode ser repetida.
+.TP
+.BR \-\-exclude-from " arquivo
+Carrega uma exclusão por linha.
+.TP
+.BR \-n ", " \-\-dry-run
+Simula sem modificar arquivos.
+.TP
+.BR \-y ", " \-\-yes
+Executa sem confirmação.
+.TP
+.BR \-i ", " \-\-interactive
+Abre ncurses.
+.SH GRAPHICAL INTERFACES
+.B fix-names-gui
+seleciona GTK em ambientes GTK e Qt em KDE/LXQt. Use
+.B fix-names-gui --gtk
+ou
+.B fix-names-gui --qt
+para escolher manualmente.
+.SH AUTHOR
+Projeto fix-names.

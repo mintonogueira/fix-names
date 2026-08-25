@@ -1,0 +1,31 @@
+# PKGBUILD usado pelo instalador do Arch Linux.
+#
+# Os dois marcadores abaixo são preenchidos pelo script somente depois de ele
+# criar o arquivo-fonte local. Assim, o makepkg confere o SHA-256 dos fontes e
+# não precisa confiar em uma soma fixa que ficaria desatualizada após revisões.
+
+pkgname=fix-names
+pkgver=@VERSION@
+pkgrel=1
+pkgdesc='Renomeador em massa seguro com CLI, ncurses, GTK 4 e Qt 6'
+arch=("$CARCH")
+depends=('glibc' 'gcc-libs' 'ncurses' 'gtk4' 'qt6-base')
+makedepends=('gcc' 'make' 'pkgconf')
+options=('lto')
+source=("fix-names-${pkgver}.tar.gz")
+sha256sums=('@SOURCE_SHA256@')
+
+build() {
+    cd "fix-names-${pkgver}"
+    make PREFIX=/usr
+}
+
+check() {
+    cd "fix-names-${pkgver}"
+    make test
+}
+
+package() {
+    cd "fix-names-${pkgver}"
+    make PREFIX=/usr DESTDIR="$pkgdir" install
+}

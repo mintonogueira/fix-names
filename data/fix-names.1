@@ -1,0 +1,143 @@
+.TH FIX-NAMES 1 "August 2026" "fix-names 2.1.7" "User Commands"
+.SH NAME
+fix-names \- renomeador em massa seguro com CLI, ncurses, GTK e Qt
+.SH SYNOPSIS
+.B fix-names
+.br
+.B fix-names
+.RI [ opções ] " [caminho]"
+.SH DESCRIPTION
+Sem argumentos, abre a interface ncurses. Com opções, renomeia o conteúdo do
+caminho informado. Nenhuma transformação é ativada implicitamente. Extensões
+ficam protegidas e a recursão fica desativada por padrão. O programa recusa
+execução como root e nunca sobrescreve um destino existente.
+Durante a simulação e a aplicação, exibe uma barra de progresso percentual
+calculada sobre a quantidade real de itens da requisição.
+As interfaces GTK e Qt desativam todos os controles e impedem o fechamento da
+janela até que a requisição e sua barra de progresso sejam concluídas.
+.SH OPTIONS
+.TP
+.BR \-u ", " \-\-uppercase
+Converte os nomes para maiúsculas.
+.TP
+.BR \-l ", " \-\-lowercase
+Converte os nomes para minúsculas.
+.TP
+.BR \-c ", " \-\-capitalize
+Coloca a inicial de cada palavra em maiúscula.
+.TP
+.BR \-a ", " \-\-remove-accents
+Remove acentos latinos.
+.TP
+.BR \-s ", " \-\-spaces " caractere
+Substitui espaços pelo caractere informado.
+.TP
+.BR \-\-underscores " caractere
+Substitui sublinhados pelo caractere informado.
+.TP
+.BR \-f ", " \-\-find " texto
+Localiza texto literal; deve ser usada com --replace.
+.TP
+.BR \-p ", " \-\-replace " texto
+Texto substituto; deve ser usada com --find.
+.TP
+.BR \-\-insert " texto
+Insere texto na posição definida por --position.
+.TP
+.BR \-\-overwrite " texto
+Sobrescreve caracteres na posição definida por --position.
+.TP
+.BR \-\-position " n
+Define a posição em caracteres.
+.TP
+.BR \-\-from-end
+Conta a posição a partir do fim.
+.TP
+.BR \-r ", " \-\-recursive
+Processa também subpastas e seus conteúdos.
+.TP
+.BR \-\-include-extension
+Permite que as transformações alcancem extensões.
+.TP
+.BR \-x ", " \-\-exclude " caminho
+Exclui um item. Pode ser repetida.
+.TP
+.BR \-\-exclude-from " arquivo
+Carrega uma exclusão por linha.
+.TP
+.BR \-n ", " \-\-dry-run
+Simula sem modificar arquivos.
+.TP
+.BR \-y ", " \-\-yes
+Executa sem confirmação.
+.TP
+.BR \-i ", " \-\-interactive
+Abre ncurses, opcionalmente com o caminho e as transformações já lidas.
+.TP
+.BR \-h ", " \-\-help
+Mostra a ajuda no idioma detectado.
+.TP
+.BR \-V ", " \-\-version
+Mostra a versão incorporada no executável.
+.TP
+.B \-\-
+Encerra a interpretação de opções. Use antes de um caminho iniciado por hífen.
+.SH TRANSFORMATION ORDER
+Quando mais de uma transformação é ativada, o núcleo aplica: remoção de
+acentos; localizar/substituir; inserir/sobrescrever; substituição de espaços;
+substituição de sublinhados; e capitalização. Em arquivos e links, a extensão
+protegida é separada antes dessas etapas e recolocada byte por byte no final.
+.SH SAFETY
+O programa exige ao menos uma transformação, bloqueia o alvo raiz /, não segue
+links simbólicos e protege o próprio executável. Colisões preservam todos os
+itens envolvidos. A renomeação usa renameat2 com RENAME_NOREPLACE e uma fase
+temporária por diretório; não recua para uma operação que possa sobrescrever.
+.PP
+Exclusões relativas são resolvidas a partir da pasta-alvo. Excluir uma pasta
+protege também todo o seu conteúdo. O diretório-base escolhido não tem seu
+próprio nome alterado.
+.SH GRAPHICAL INTERFACES
+.B fix-names-gui
+seleciona GTK em ambientes GTK e Qt em KDE/LXQt. Use
+.B fix-names-gui --gtk
+ou
+.B fix-names-gui --qt
+para escolher manualmente.
+.SH EXIT STATUS
+.TP
+.B 0
+Sucesso, ajuda/versão exibida ou cancelamento confirmado pelo usuário.
+.TP
+.B 1
+Erro operacional, conflito ou resultado do núcleo sem sucesso.
+.TP
+.B 2
+Erro de sintaxe, combinação de flags ou validação feita pela CLI.
+.TP
+.B 77
+Execução recusada porque o usuário efetivo é root.
+.SH EXAMPLES
+.PP
+Simular minúsculas, remoção de acentos e hífens no lugar de espaços:
+.PP
+.B fix-names --lowercase --remove-accents --spaces=- --dry-run ~/Documentos
+.PP
+Aplicar recursivamente com uma exclusão:
+.PP
+.B fix-names --uppercase --recursive --exclude manter.txt --yes ~/Imagens
+.SH FILES
+.TP
+.I /usr/share/doc/fix-names/DOCUMENTACAO.md
+Índice da documentação completa.
+.TP
+.I /usr/share/doc/fix-names/docs/
+Manuais de usuário, interfaces, arquitetura, empacotamento, testes e diagnóstico.
+.TP
+.I /usr/share/applications/fix-names.desktop
+Entrada e ações GTK/Qt do menu de aplicativos.
+.SH LIMITATIONS
+Específico para Linux. A busca é literal, sem expressões regulares. Não existe
+desfazer persistente depois de uma execução concluída; a reversão automática
+se limita a uma falha durante o lote atual.
+.SH AUTHOR
+Projeto fix-names.

@@ -1,0 +1,54 @@
+#!/bin/sh
+
+# Seleciona a GUI mais integrada ao ambiente gráfico atual. O núcleo continua
+# sendo exatamente o mesmo; somente o conjunto de widgets muda.
+#
+# O diretório dos executáveis é calculado a partir deste próprio seletor. Assim,
+# quando /usr/bin/fix-names-gui é iniciado, GTK e Qt também são carregados de
+# /usr/bin. Isso evita que um arquivo antigo em /usr/local/bin, normalmente
+# anterior no PATH, misture componentes de duas versões diferentes.
+
+set -eu
+
+DIRETORIO_BIN=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+EXECUTAVEL_GTK=$DIRETORIO_BIN/fix-names-gtk
+EXECUTAVEL_QT=$DIRETORIO_BIN/fix-names-qt
+
+if [ "$(id -u)" -eq 0 ]; then
+    printf '%s\n' 'ERRO: o fix-names nunca pode ser executado como root.' >&2
+    exit 77
+fi
+
+INTERFACE=
+case ${1-} in
+    --gtk)
+        INTERFACE=gtk
+        shift
+        ;;
+    --qt)
+        INTERFACE=qt
+        shift
+        ;;
+esac
+
+if [ -z "$INTERFACE" ]; then
+    AMBIENTE=$(printf '%s' "${XDG_CURRENT_DESKTOP-}:${DESKTOP_SESSION-}" |
+        tr '[:upper:]' '[:lower:]')
+    case $AMBIENTE in
+        *kde*|*plasma*|*lxqt*) INTERFACE=qt ;;
+        *)                     INTERFACE=gtk ;;
+    esac
+fi
+
+if [ "$INTERFACE" = qt ] && [ -x "$EXECUTAVEL_QT" ]; then
+    exec "$EXECUTAVEL_QT" "$@"
+fi
+if [ -x "$EXECUTAVEL_GTK" ]; then
+    exec "$EXECUTAVEL_GTK" "$@"
+fi
+if [ -x "$EXECUTAVEL_QT" ]; then
+    exec "$EXECUTAVEL_QT" "$@"
+fi
+
+printf '%s\n' 'ERRO: nenhuma interface gráfica do fix-names foi encontrada.' >&2
+exit 1

@@ -1,0 +1,54 @@
+FIX-NAMES 2.1.1 — CONTEÚDO DA ENTREGA
+=====================================
+
+Este pacote contém o projeto completo necessário para compilar, testar,
+empacotar, instalar e executar o fix-names no Debian ou no Arch Linux.
+
+INSTALAÇÃO AUTOMÁTICA
+---------------------
+
+  ./instalar.sh
+
+O instalador detecta Debian/derivadas ou Arch Linux/derivadas e chama o script
+correto. Execute sempre como usuário comum. sudo será solicitado apenas para
+instalar dependências e o pacote binário final.
+
+ARQUIVOS PRINCIPAIS
+-------------------
+
+  Makefile                              compilação e instalação
+  README.md                             documentação completa
+  instalar.sh                           instalador automático
+  SHA256SUMS                            verificação de integridade
+  src/core.cpp e src/core.hpp           núcleo compartilhado
+  src/cli_main.cpp                      CLI e entrada ncurses
+  src/ncurses_ui.cpp/.hpp               interface ncurses e navegador
+  src/gtk_main.cpp                      GUI GTK 4 independente
+  src/qt_main.cpp                       GUI Qt 6 independente
+  tests/test_core.cpp                   testes automatizados
+  assets/fix-names.png                  ícone oficial fornecido
+  data/fix-names-gui                    seletor GTK/Qt
+  data/fix-names.desktop                entrada no menu de aplicativos
+  data/fix-names.1                      página de manual
+  packaging/debian/control.in           modelo do pacote Debian
+  packaging/arch/PKGBUILD.in            modelo do pacote Arch Linux
+  scripts/verificar_projeto.sh          detector de pacote incompleto
+  scripts/compilar_instalar_debian.sh   gera e instala o .deb
+  scripts/compilar_instalar_arch.sh     gera e instala o .pkg.tar.zst
+
+PACOTES GERADOS
+---------------
+
+Debian:
+  pacotes/fix-names_2.1.1-1_<arquitetura>.deb
+
+Arch Linux:
+  pacotes/fix-names-2.1.1-1-<arquitetura>.pkg.tar.zst
+
+EXECUÇÃO APÓS A INSTALAÇÃO
+--------------------------
+
+  fix-names          CLI/ncurses
+  fix-names-gui      seleciona GTK ou Qt automaticamente
+  fix-names-gtk      abre a GUI GTK
+  fix-names-qt       abre a GUI Qt

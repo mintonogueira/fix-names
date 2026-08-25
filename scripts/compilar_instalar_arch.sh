@@ -84,6 +84,14 @@ command -v makepkg >/dev/null 2>&1 ||
     erro 'makepkg não foi encontrado; instale o grupo base-devel.'
 command -v sudo >/dev/null 2>&1 ||
     erro 'sudo não está instalado ou não está disponível no PATH.'
+
+# Verifica toda a estrutura antes de instalar dependências. Além de detectar
+# fontes ausentes, esta etapa valida os scripts POSIX, o modelo de pacote e a
+# assinatura do ícone PNG incluído na distribuição.
+[ -f "$DIRETORIO_SCRIPT/verificar_projeto.sh" ] ||
+    erro 'scripts/verificar_projeto.sh não foi encontrado; pacote incompleto.'
+sh "$DIRETORIO_SCRIPT/verificar_projeto.sh"
+
 [ -f "$DIRETORIO_PROJETO/Makefile" ] ||
     erro "Makefile não encontrado em $DIRETORIO_PROJETO"
 [ -f "$DIRETORIO_PROJETO/packaging/arch/PKGBUILD.in" ] ||

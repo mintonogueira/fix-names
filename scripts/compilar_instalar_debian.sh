@@ -90,6 +90,14 @@ command -v apt-get >/dev/null 2>&1 ||
     erro 'apt-get não foi encontrado; este instalador é específico para Debian.'
 command -v sudo >/dev/null 2>&1 ||
     erro 'sudo não está instalado ou não está disponível no PATH.'
+
+# Antes de instalar dependências ou pedir autenticação, confere se o pacote
+# extraído contém todos os fontes e recursos necessários. Isso evita que uma
+# cópia incompleta avance até a compilação e falhe com uma mensagem obscura.
+[ -f "$DIRETORIO_SCRIPT/verificar_projeto.sh" ] ||
+    erro 'scripts/verificar_projeto.sh não foi encontrado; pacote incompleto.'
+sh "$DIRETORIO_SCRIPT/verificar_projeto.sh"
+
 [ -f "$DIRETORIO_PROJETO/Makefile" ] ||
     erro "Makefile não encontrado em $DIRETORIO_PROJETO"
 [ -f "$DIRETORIO_PROJETO/packaging/debian/control.in" ] ||

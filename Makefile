@@ -93,6 +93,7 @@ install: all
 	install -D -m 0644 assets/fix-names.png "$(DESTDIR)$(PREFIX)/share/pixmaps/fix-names.png"
 	install -D -m 0644 data/fix-names.desktop "$(DESTDIR)$(PREFIX)/share/applications/fix-names.desktop"
 	install -D -m 0644 data/fix-names.1 "$(DESTDIR)$(PREFIX)/share/man/man1/fix-names.1"
+	install -D -m 0644 README.md "$(DESTDIR)$(PREFIX)/share/doc/fix-names/README.md"
 
 clean:
 	@test -n "$(BUILD_DIR)" && test "$(BUILD_DIR)" != "/"

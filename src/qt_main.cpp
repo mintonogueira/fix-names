@@ -12,6 +12,7 @@
 #include <QAbstractItemView>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QEventLoop>
 #include <QFileDialog>
 #include <QFormLayout>
 #include <QGridLayout>
@@ -24,6 +25,7 @@
 #include <QMainWindow>
 #include <QMessageBox>
 #include <QPlainTextEdit>
+#include <QProgressBar>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QSpinBox>
@@ -84,6 +86,7 @@ private:
     QCheckBox *recursive_check = nullptr;
     QCheckBox *include_extension_check = nullptr;
     QListWidget *exclusion_list = nullptr;
+    QProgressBar *progress_bar = nullptr;
     QPlainTextEdit *log_view = nullptr;
     std::vector<fs::path> exclusions;
 
@@ -122,7 +125,27 @@ private:
 
     void run(bool dry_run)
     {
-        show_result(run_renamer(collect_options(dry_run), language));
+        progress_bar->setValue(0);
+        progress_bar->setFormat(qtr(language, "0% — preparando", "0% — preparing"));
+
+        /* O callback usa os contadores do núcleo e processa somente eventos
+         * de desenho/timer. Eventos de entrada ficam excluídos para impedir
+         * uma segunda requisição enquanto a atual ainda está em andamento. */
+        const RunResult result = run_renamer(
+            collect_options(dry_run), language, {},
+            [this](std::size_t completed, std::size_t total) {
+                const int percentage = total == 0
+                                           ? 100
+                                           : static_cast<int>((completed * 100) / total);
+                progress_bar->setValue(percentage);
+                progress_bar->setFormat(
+                    QStringLiteral("%1% (%2/%3)")
+                        .arg(percentage)
+                        .arg(static_cast<qulonglong>(completed))
+                        .arg(static_cast<qulonglong>(total)));
+                QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+            });
+        show_result(result);
     }
 
     void browse_folder()
@@ -343,6 +366,13 @@ private:
         connect(preview_button, &QPushButton::clicked, this, [this] { run(true); });
         connect(apply_button, &QPushButton::clicked, this,
                 [this] { confirm_apply(); });
+
+        progress_bar = new QProgressBar(central);
+        progress_bar->setRange(0, 100);
+        progress_bar->setValue(0);
+        progress_bar->setTextVisible(true);
+        progress_bar->setFormat(QStringLiteral("0%"));
+        outer->addWidget(progress_bar);
 
         log_view = new QPlainTextEdit(central);
         log_view->setReadOnly(true);

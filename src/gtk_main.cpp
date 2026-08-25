@@ -42,6 +42,9 @@ struct GtkState {
     GtkWidget *recursive_check = nullptr;
     GtkWidget *include_extension_check = nullptr;
     GtkWidget *exclusions_list = nullptr;
+    GtkWidget *progress_bar = nullptr;
+    GtkWidget *preview_button = nullptr;
+    GtkWidget *apply_button = nullptr;
     GtkWidget *log_view = nullptr;
     std::vector<fs::path> exclusions;
 };
@@ -142,8 +145,36 @@ RenamerOptions collect_options(GtkState *state, bool dry_run)
 void run_operation(GtkState *state, bool dry_run)
 {
     const RenamerOptions options = collect_options(state, dry_run);
-    const RunResult result = run_renamer(options, state->language);
+    gtk_widget_set_sensitive(state->preview_button, FALSE);
+    gtk_widget_set_sensitive(state->apply_button, FALSE);
+    gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(state->progress_bar), 0.0);
+    gtk_progress_bar_set_text(
+        GTK_PROGRESS_BAR(state->progress_bar),
+        text(state->language, "0% — preparando", "0% — preparing"));
+
+    /* O núcleo permanece independente de GTK. Este callback converte os
+     * contadores reais em fração/percentual e permite que o GTK redesenhe a
+     * janela sem aceitar novos cliques durante a operação. */
+    const RunResult result = run_renamer(
+        options, state->language, {},
+        [state](std::size_t completed, std::size_t total) {
+            const int percentage = total == 0
+                                       ? 100
+                                       : static_cast<int>((completed * 100) / total);
+            const double fraction = static_cast<double>(percentage) / 100.0;
+            gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(state->progress_bar),
+                                          fraction);
+            const std::string label = std::to_string(percentage) + "% (" +
+                                      std::to_string(completed) + "/" +
+                                      std::to_string(total) + ")";
+            gtk_progress_bar_set_text(GTK_PROGRESS_BAR(state->progress_bar),
+                                      label.c_str());
+            while (g_main_context_pending(nullptr))
+                g_main_context_iteration(nullptr, FALSE);
+        });
     set_log(state, result.messages);
+    gtk_widget_set_sensitive(state->preview_button, TRUE);
+    gtk_widget_set_sensitive(state->apply_button, TRUE);
 }
 
 void on_folder_response(GtkNativeDialog *dialog, int response, gpointer data)
@@ -469,15 +500,21 @@ void on_activate(GtkApplication *application, gpointer user_data)
     gtk_box_append(GTK_BOX(options_box), exclude_buttons);
 
     GtkWidget *action_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
-    GtkWidget *preview = gtk_button_new_with_label(
+    state->preview_button = gtk_button_new_with_label(
         text(state->language, "Pré-visualizar", "Preview"));
-    GtkWidget *apply = gtk_button_new_with_label(
+    state->apply_button = gtk_button_new_with_label(
         text(state->language, "Aplicar alterações", "Apply changes"));
-    g_signal_connect(preview, "clicked", G_CALLBACK(on_preview), state);
-    g_signal_connect(apply, "clicked", G_CALLBACK(on_apply), state);
-    gtk_box_append(GTK_BOX(action_box), preview);
-    gtk_box_append(GTK_BOX(action_box), apply);
+    g_signal_connect(state->preview_button, "clicked", G_CALLBACK(on_preview), state);
+    g_signal_connect(state->apply_button, "clicked", G_CALLBACK(on_apply), state);
+    gtk_box_append(GTK_BOX(action_box), state->preview_button);
+    gtk_box_append(GTK_BOX(action_box), state->apply_button);
     gtk_box_append(GTK_BOX(outer), action_box);
+
+    state->progress_bar = gtk_progress_bar_new();
+    gtk_progress_bar_set_show_text(GTK_PROGRESS_BAR(state->progress_bar), TRUE);
+    gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(state->progress_bar), 0.0);
+    gtk_progress_bar_set_text(GTK_PROGRESS_BAR(state->progress_bar), "0%");
+    gtk_box_append(GTK_BOX(outer), state->progress_bar);
 
     GtkWidget *log_scroll = gtk_scrolled_window_new();
     gtk_scrolled_window_set_min_content_height(GTK_SCROLLED_WINDOW(log_scroll), 150);

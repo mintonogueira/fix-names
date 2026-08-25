@@ -1,4 +1,4 @@
-# fix-names 2.0.0
+# fix-names 2.1.0
 
 `fix-names` é um renomeador em massa nativo para Linux, escrito em C++17 e
 projetado para trabalhar sem privilégios administrativos. O mesmo núcleo é
@@ -110,13 +110,27 @@ fix-names-gui --qt     # força Qt
 
 Ncurses, GTK e Qt oferecem navegador de pastas, controles para todas as
 transformações, recursão opcional, proteção de extensões, lista de arquivos
-excluídos, pré-visualização e confirmação antes da aplicação.
+excluídos, pré-visualização e confirmação antes da aplicação. CLI, ncurses,
+GTK e Qt exibem uma barra de progresso baseada na quantidade real de itens,
+com percentual e contador `concluídos/total`.
 
 ## Instalação no Arch Linux
 
 ```bash
 chmod +x scripts/compilar_instalar_arch.sh
 ./scripts/compilar_instalar_arch.sh
+```
+
+O script compila, testa, cria e instala um pacote nativo semelhante a:
+
+```text
+pacotes/fix-names-2.1.0-1-x86_64.pkg.tar.zst
+```
+
+O arquivo permanece na pasta `pacotes` e pode ser reinstalado posteriormente:
+
+```bash
+sudo pacman -U pacotes/fix-names-2.1.0-1-x86_64.pkg.tar.zst
 ```
 
 ## Instalação no Debian
@@ -126,16 +140,30 @@ chmod +x scripts/compilar_instalar_debian.sh
 ./scripts/compilar_instalar_debian.sh
 ```
 
+O script compila, testa, calcula automaticamente as dependências ELF, cria e
+instala um pacote semelhante a:
+
+```text
+pacotes/fix-names_2.1.0-1_amd64.deb
+```
+
+Para reinstalar o arquivo já criado:
+
+```bash
+sudo apt install ./pacotes/fix-names_2.1.0-1_amd64.deb
+```
+
 Os dois instaladores devem ser executados por um usuário comum com `sudo`.
 Eles instalam dependências, compilam, executam testes, validam GTK/Qt em uma
-tela virtual e só então instalam em `/usr/local`.
+tela virtual, geram o pacote nativo e só então pedem ao gerenciador da
+distribuição que instale esse pacote em `/usr`.
 
 ## Compilação manual
 
 ```bash
 make -j"$(getconf _NPROCESSORS_ONLN)" all
 make test
-sudo make PREFIX=/usr/local install
+sudo make PREFIX=/usr install
 ```
 
 ## Estrutura do projeto
@@ -151,4 +179,6 @@ assets/fix-names.png          ícone fornecido para o projeto
 data/fix-names-gui            seletor automático de GUI
 data/fix-names.desktop        entrada do menu de aplicativos
 scripts/compilar_instalar_*   instaladores Arch e Debian
+packaging/arch/PKGBUILD.in    modelo validado para o makepkg
+packaging/debian/control.in   metadados do pacote .deb
 ```

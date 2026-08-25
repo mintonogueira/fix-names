@@ -5,10 +5,11 @@
 /*
  * Implementação do núcleo seguro do fix-names.
  *
- * A execução é dividida em três fases:
- *   1. enumeração e cálculo do novo nome;
- *   2. detecção de colisões dentro de cada diretório;
- *   3. renomeação em duas etapas (nome original -> temporário -> final).
+ * A execução é dividida em quatro fases:
+ *   1. contagem segura dos itens para a barra de progresso;
+ *   2. enumeração e cálculo do novo nome;
+ *   3. detecção de colisões dentro de cada diretório;
+ *   4. renomeação em duas etapas (nome original -> temporário -> final).
  *
  * A etapa temporária permite trocar nomes e resolver cadeias como A -> B e
  * B -> C sem sobrescrever nada. Todas as renomeações usam renameat2() com
@@ -71,9 +72,12 @@ struct ExecutionContext {
     Language language;
     RunResult result;
     LogCallback callback;
+    ProgressCallback progress_callback;
     std::vector<fs::path> normalized_exclusions;
     fs::path executable_path;
     unsigned long long temporary_counter = 0;
+    std::size_t progress_current = 0;
+    std::size_t progress_total = 0;
 };
 
 /* Decodifica um ponto Unicode. Bytes inválidos são devolvidos como tokens
@@ -504,6 +508,54 @@ bool is_excluded(const ExecutionContext &context, const fs::path &path)
     return false;
 }
 
+/* Atualiza as interfaces somente por meio do callback. O valor concluído é
+ * limitado ao total para que alterações simultâneas no diretório (um arquivo
+ * criado depois da contagem, por exemplo) nunca produzam percentual acima de
+ * 100%. */
+void report_progress(ExecutionContext &context)
+{
+    if (context.progress_callback) {
+        context.progress_callback(
+            std::min(context.progress_current, context.progress_total),
+            context.progress_total);
+    }
+}
+
+void advance_progress(ExecutionContext &context, std::size_t amount = 1)
+{
+    context.progress_current += amount;
+    report_progress(context);
+}
+
+/* Faz uma passagem exclusivamente de leitura para obter o denominador da
+ * barra. Ela replica as regras da execução: não segue links, não desce em
+ * diretórios excluídos e só visita subpastas quando a recursão está ativa.
+ * Erros de leitura não são registrados nesta fase, pois a passagem efetiva os
+ * relatará uma única vez. */
+std::size_t count_directory_entries(const fs::path &directory,
+                                    const ExecutionContext &context)
+{
+    std::error_code error;
+    fs::directory_iterator iterator(directory,
+                                    fs::directory_options::skip_permission_denied,
+                                    error);
+    if (error)
+        return 0;
+
+    std::size_t total = 0;
+    for (const fs::directory_entry &entry : iterator) {
+        ++total;
+        if (!context.options.recursive || is_excluded(context, entry.path()))
+            continue;
+
+        std::error_code status_error;
+        const fs::file_status status = entry.symlink_status(status_error);
+        if (!status_error && fs::is_directory(status) && !fs::is_symlink(status))
+            total += count_directory_entries(entry.path(), context);
+    }
+    return total;
+}
+
 int rename_noreplace(const fs::path &source, const fs::path &destination)
 {
 #ifdef SYS_renameat2
@@ -601,6 +653,7 @@ void mark_conflicts(std::vector<EntryPlan> &entries, const fs::path &parent,
              display_path(entry.original_path) + " -> " +
              display_path(parent / entry.final_name) + " (" +
              entry.conflict_reason + ")");
+        advance_progress(context);
     }
 }
 
@@ -651,8 +704,10 @@ void execute_group(const fs::path &parent, std::vector<EntryPlan> &entries,
             ++context.result.stats.excluded;
             emit(context, tr(context.language, "[IGNORADO] ", "[EXCLUDED] ") +
                  display_path(entry.original_path));
+            advance_progress(context);
         } else if (entry.original_name == entry.final_name) {
             ++context.result.stats.unchanged;
+            advance_progress(context);
         } else if (entry.active) {
             active.push_back(&entry);
         }
@@ -663,6 +718,7 @@ void execute_group(const fs::path &parent, std::vector<EntryPlan> &entries,
             emit(context, tr(context.language, "[SIMULAÇÃO] ", "[DRY RUN] ") +
                  display_path(parent / entry->original_name) + " -> " +
                  display_path(parent / entry->final_name));
+            advance_progress(context);
         }
         return;
     }
@@ -680,6 +736,7 @@ void execute_group(const fs::path &parent, std::vector<EntryPlan> &entries,
                  display_path(parent / entry->original_name) + ": " +
                  strerror_string(saved_errno));
             rollback_group(parent, moved_to_temporary, 0, context);
+            advance_progress(context, active.size());
             return;
         }
         moved_to_temporary.push_back(entry);
@@ -697,9 +754,14 @@ void execute_group(const fs::path &parent, std::vector<EntryPlan> &entries,
                  display_path(parent / entry->final_name) + ": " +
                  strerror_string(saved_errno));
             rollback_group(parent, moved_to_temporary, finalized, context);
+            /* Os itens já finalizados informaram progresso. O item que falhou
+             * e os restantes também foram concluídos como tentativas após a
+             * reversão segura do lote. */
+            advance_progress(context, active.size() - finalized);
             return;
         }
         ++finalized;
+        advance_progress(context);
     }
 
     for (EntryPlan *entry : active) {
@@ -918,9 +980,11 @@ std::string transform_name(const std::string &name, bool is_directory,
 }
 
 RunResult run_renamer(const RenamerOptions &options, Language language,
-                      const LogCallback &callback)
+                      const LogCallback &callback,
+                      const ProgressCallback &progress_callback)
 {
-    ExecutionContext context{options, language, {}, callback, {}, {}, 0};
+    ExecutionContext context{options, language, {}, callback, progress_callback,
+                             {}, {}, 0, 0, 0};
 
 #ifndef FIX_NAMES_TEST_ALLOW_ROOT
     if (running_as_root()) {
@@ -975,6 +1039,15 @@ RunResult run_renamer(const RenamerOptions &options, Language language,
     }
     context.executable_path = read_executable_path();
 
+    /* O total é conhecido antes da primeira alteração. Isso faz a barra
+     * representar a requisição inteira, e não apenas uma estimativa baseada
+     * na quantidade já descoberta. */
+    if (fs::is_directory(target_status) && !fs::is_symlink(target_status))
+        context.progress_total = count_directory_entries(target, context);
+    else
+        context.progress_total = 1;
+    report_progress(context);
+
     if (fs::is_directory(target_status) && !fs::is_symlink(target_status)) {
         process_directory(target, context);
     } else {
@@ -1004,6 +1077,12 @@ RunResult run_renamer(const RenamerOptions &options, Language language,
             << tr(language, ", erros=", ", errors=")
             << context.result.stats.errors;
     emit(context, summary.str());
+
+    /* Uma mudança concorrente no diretório pode tornar a contagem inicial
+     * diferente da travessia real. A conclusão sempre fecha a barra em 100%,
+     * sem alterar as estatísticas da operação. */
+    context.progress_current = context.progress_total;
+    report_progress(context);
 
     context.result.success = context.result.stats.errors == 0 &&
                              context.result.stats.conflicts == 0;

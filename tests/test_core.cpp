@@ -16,6 +16,7 @@
 #include <stdexcept>
 #include <string>
 #include <unistd.h>
+#include <utility>
 #include <vector>
 
 namespace fs = std::filesystem;
@@ -168,9 +169,30 @@ void filesystem_tests()
         preview.target = root;
         preview.case_mode = CaseMode::Uppercase;
         preview.dry_run = true;
-        RunResult simulated = run_renamer(preview, Language::PortugueseBrazil);
+        std::vector<std::pair<std::size_t, std::size_t>> progress_updates;
+        RunResult simulated = run_renamer(
+            preview, Language::PortugueseBrazil, {},
+            [&progress_updates](std::size_t completed, std::size_t total) {
+                progress_updates.emplace_back(completed, total);
+            });
         check(simulated.stats.renamed == 0, "simulação não pode renomear");
         check(fs::exists(root / "acao-final.TXT"), "simulação alterou arquivo");
+
+        /* O progresso precisa começar com denominador conhecido, nunca
+         * retroceder e terminar exatamente em total/total. Isso valida o
+         * contrato usado simultaneamente por CLI, ncurses, GTK e Qt. */
+        check(!progress_updates.empty(), "callback de progresso não foi chamado");
+        const std::size_t expected_total = progress_updates.front().second;
+        check(expected_total > 0, "contagem de itens da árvore ficou vazia");
+        std::size_t previous = 0;
+        for (const auto &[completed, total] : progress_updates) {
+            check(total == expected_total, "total do progresso mudou durante a operação");
+            check(completed >= previous, "progresso retrocedeu");
+            check(completed <= total, "progresso ultrapassou 100%");
+            previous = completed;
+        }
+        check(progress_updates.back().first == expected_total,
+              "progresso não terminou em 100%");
     } catch (...) {
         if (root.string().rfind("/tmp/fix-names-tests-", 0) == 0)
             fs::remove_all(root);

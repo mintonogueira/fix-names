@@ -17,7 +17,7 @@
 
 namespace fixnames {
 
-inline constexpr const char *VERSION = "2.0.0";
+inline constexpr const char *VERSION = "2.1.0";
 
 enum class Language {
     English,
@@ -96,6 +96,12 @@ struct RunResult {
 
 using LogCallback = std::function<void(const std::string &)>;
 
+/* O núcleo informa progresso em unidades reais de itens do sistema de
+ * arquivos. O primeiro valor é a quantidade concluída e o segundo é o total
+ * contado antes da operação. As interfaces convertem essa razão em 0--100% e
+ * escolhem como desenhar sua própria barra. */
+using ProgressCallback = std::function<void(std::size_t, std::size_t)>;
+
 /* Detecta pt* pelas variáveis LC_ALL, LC_MESSAGES e LANG, nessa ordem. */
 Language detect_language();
 
@@ -117,7 +123,8 @@ std::string transform_name(const std::string &name, bool is_directory,
 /* Executa ou simula o lote. O núcleo nunca segue links simbólicos, nunca
  * sobrescreve um destino e recusa execução quando EUID == 0. */
 RunResult run_renamer(const RenamerOptions &options, Language language,
-                      const LogCallback &callback = {});
+                      const LogCallback &callback = {},
+                      const ProgressCallback &progress_callback = {});
 
 /* Formata caminhos contendo controles sem alterar o caminho real. */
 std::string display_path(const std::filesystem::path &path);

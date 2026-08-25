@@ -330,6 +330,43 @@ void view_lines(const std::string &title, const std::vector<std::string> &lines,
     }
 }
 
+/* Executa o núcleo enquanto mantém uma barra percentual visível. O callback
+ * é chamado pelo núcleo após cada item concluído, portanto a barra representa
+ * tanto itens renomeados quanto inalterados, excluídos, simulados ou recusados
+ * por conflito. */
+RunResult run_with_progress(const RenamerOptions &options, Language language,
+                            const std::string &title)
+{
+    return run_renamer(
+        options, language, {},
+        [&title, language](std::size_t completed, std::size_t total) {
+            const int percentage = total == 0
+                                       ? 100
+                                       : static_cast<int>((completed * 100) / total);
+            erase();
+            int rows, columns;
+            getmaxyx(stdscr, rows, columns);
+            add_truncated(0, 1, title, columns - 2);
+            add_truncated(2, 1,
+                          tr(language, "Processando itens...", "Processing items..."),
+                          columns - 2);
+
+            const int width = std::max(1, std::min(50, columns - 4));
+            const int filled = percentage * width / 100;
+            std::string bar = "[";
+            for (int index = 0; index < width; ++index)
+                bar.push_back(index < filled ? '#' : '-');
+            bar.push_back(']');
+            add_truncated(std::min(4, std::max(0, rows - 2)), 1, bar, columns - 2);
+
+            std::ostringstream status;
+            status << percentage << "% (" << completed << '/' << total << ')';
+            add_truncated(std::min(5, std::max(0, rows - 1)), 1,
+                          status.str(), columns - 2);
+            refresh();
+        });
+}
+
 void configure_insert(RenamerOptions &options, Language language)
 {
     const std::vector<std::string> choices = {
@@ -551,7 +588,9 @@ int run_ncurses_interface(RenamerOptions options, Language language)
         case 11: {
             RenamerOptions preview = options;
             preview.dry_run = true;
-            const RunResult result = run_renamer(preview, language);
+            const RunResult result = run_with_progress(
+                preview, language,
+                tr(language, "Simulando alterações", "Simulating changes"));
             view_lines(tr(language, "Resultado da simulação", "Dry-run result"),
                        result.messages, language);
             break;
@@ -563,7 +602,9 @@ int run_ncurses_interface(RenamerOptions options, Language language)
                            language)) {
                 RenamerOptions apply = options;
                 apply.dry_run = false;
-                const RunResult result = run_renamer(apply, language);
+                const RunResult result = run_with_progress(
+                    apply, language,
+                    tr(language, "Aplicando alterações", "Applying changes"));
                 view_lines(tr(language, "Resultado da execução", "Execution result"),
                            result.messages, language);
             }

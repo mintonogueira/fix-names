@@ -17,6 +17,7 @@
 #include <getopt.h>
 #include <iostream>
 #include <limits>
+#include <iomanip>
 #include <string>
 
 namespace {
@@ -165,6 +166,29 @@ bool confirm(Language language)
     if (language == Language::PortugueseBrazil)
         return answer == "s" || answer == "S" || answer == "sim" || answer == "SIM";
     return answer == "y" || answer == "Y" || answer == "yes" || answer == "YES";
+}
+
+/* Desenha uma única barra atualizável no terminal. A largura fixa mantém a
+ * saída legível inclusive em TTYs simples, enquanto os contadores mostram de
+ * onde o percentual foi calculado. O relatório detalhado é impresso somente
+ * depois de a barra terminar, evitando que as duas saídas se sobreponham. */
+void print_progress(std::size_t completed, std::size_t total,
+                    Language language, int &last_percentage)
+{
+    const int percentage = total == 0
+                               ? 100
+                               : static_cast<int>((completed * 100) / total);
+    if (percentage == last_percentage)
+        return;
+    last_percentage = percentage;
+
+    constexpr int width = 30;
+    const int filled = percentage * width / 100;
+    std::cerr << '\r' << tr(language, "Progresso ", "Progress ") << '[';
+    for (int index = 0; index < width; ++index)
+        std::cerr << (index < filled ? '#' : '-');
+    std::cerr << "] " << std::setw(3) << percentage << "% ("
+              << completed << '/' << total << ')' << std::flush;
 }
 
 } // namespace
@@ -352,9 +376,15 @@ int main(int argc, char **argv)
         return 0;
     }
 
+    int last_percentage = -1;
     const fixnames::RunResult result = fixnames::run_renamer(
-        options, language, [](const std::string &line) {
-            std::cout << line << '\n';
+        options, language, {},
+        [&language, &last_percentage](std::size_t completed, std::size_t total) {
+            print_progress(completed, total, language, last_percentage);
         });
+    if (last_percentage >= 0)
+        std::cerr << '\n';
+    for (const std::string &line : result.messages)
+        std::cout << line << '\n';
     return result.success ? 0 : 1;
 }

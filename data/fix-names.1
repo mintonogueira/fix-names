@@ -1,4 +1,4 @@
-.TH FIX-NAMES 1 "August 2026" "fix-names 2.0.0" "User Commands"
+.TH FIX-NAMES 1 "August 2026" "fix-names 2.1.0" "User Commands"
 .SH NAME
 fix-names \- renomeador em massa seguro com CLI, ncurses, GTK e Qt
 .SH SYNOPSIS
@@ -11,6 +11,8 @@ Sem argumentos, abre a interface ncurses. Com opções, renomeia o conteúdo do
 caminho informado. Nenhuma transformação é ativada implicitamente. Extensões
 ficam protegidas e a recursão fica desativada por padrão. O programa recusa
 execução como root e nunca sobrescreve um destino existente.
+Durante a simulação e a aplicação, exibe uma barra de progresso percentual
+calculada sobre a quantidade real de itens da requisição.
 .SH OPTIONS
 .TP
 .BR \-u ", " \-\-uppercase

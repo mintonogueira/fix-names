@@ -1,0 +1,12 @@
+Package: fix-names
+Version: @VERSION@-1
+Section: utils
+Priority: optional
+Architecture: @ARCHITECTURE@
+Maintainer: fix-names Project <fix-names@localhost>
+Depends: @DEPENDS@
+Installed-Size: @INSTALLED_SIZE@
+Description: renomeador em massa seguro com interfaces nativas
+ O fix-names renomeia arquivos e diretórios com CLI, ncurses, GTK 4 e
+ Qt 6. Extensões são protegidas por padrão, a recursão é opcional e destinos
+ existentes nunca são sobrescritos.

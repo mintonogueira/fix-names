@@ -15,8 +15,8 @@ mais profundos primeiro e só depois renomeia as próprias subpastas.
 Extraia a entrega completa e entre na pasta do projeto:
 
 ```bash
-tar -xzf fix-names-2.1.6-completo-documentado.tar.gz
-cd fix-names-2.1.6
+tar -xzf fix-names-2.1.7.tar.gz
+cd fix-names-2.1.7
 ```
 
 Execute como usuário comum. Não use `sudo` na frente do instalador:

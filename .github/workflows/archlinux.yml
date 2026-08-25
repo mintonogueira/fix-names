@@ -1,0 +1,51 @@
+name: Arch Linux
+
+on:
+  push:
+    branches:
+      - main
+      - publish-version-history
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-package-install:
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+
+    steps:
+      - name: Atualizar Arch e instalar dependências da automação
+        run: pacman -Syu --noconfirm git sudo
+
+      - name: Obter o projeto
+        uses: actions/checkout@v4
+
+      - name: Preparar usuário sem privilégios
+        run: |
+          useradd --create-home builder
+          chown -R builder:builder "$GITHUB_WORKSPACE"
+          printf 'builder ALL=(ALL:ALL) NOPASSWD: ALL\n' > /etc/sudoers.d/builder
+          chmod 0440 /etc/sudoers.d/builder
+          install -d -m 0700 -o builder -g builder /tmp/runtime-builder
+
+      - name: Compilar, testar, empacotar e instalar no Arch Linux
+        run: |
+          sudo -H -u builder env \
+            XDG_RUNTIME_DIR=/tmp/runtime-builder \
+            "$GITHUB_WORKSPACE/compilar_instalar_arch.sh"
+
+      - name: Confirmar o pacote instalado
+        run: |
+          pacman -Q fix-names
+          /usr/bin/fix-names --version
+          readelf -h /usr/bin/fix-names-qt | grep 'Type:.*DYN'
+          ! readelf -d /usr/bin/fix-names-qt | grep -q TEXTREL
+
+      - name: Disponibilizar o pacote Arch Linux
+        uses: actions/upload-artifact@v4
+        with:
+          name: fix-names-archlinux
+          path: pacotes/archlinux/*.pkg.tar.zst
+          if-no-files-found: error

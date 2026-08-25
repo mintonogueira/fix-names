@@ -1,6 +1,6 @@
-# Documentação oficial do fix-names 2.1.6
+# Documentação oficial do fix-names 2.1.7
 
-Esta documentação descreve a versão funcional `2.1.6` do **fix-names**, um
+Esta documentação descreve a versão `2.1.7` do **fix-names**, um
 renomeador em massa nativo para Linux. O texto foi confrontado com os fontes,
 os testes, o Makefile e os empacotadores da própria versão.
 
@@ -76,13 +76,12 @@ processado porque diretórios não possuem uma extensão protegida pelo núcleo.
 ## Estado desta versão
 
 - Programa e instalador Debian: testados e confirmados como funcionais.
-- Atualização/reinstalação Debian: corrigida e confirmada na versão `2.1.6`.
+- Atualização/reinstalação Debian: corrigida e confirmada desde a versão `2.1.6`.
 - A colisão entre `fixnames::tr()` e `QMainWindow::tr()` foi corrigida na
   versão `2.1.5`.
 - Barra de progresso: ativa nas quatro interfaces.
-- Empacotador Arch Linux: implementado e validado estruturalmente, mas o teste
-  real da versão `2.1.6` falhou na vinculação de `fix-names-qt` com LTO. O
-  suporte Arch permanece pendente de uma nova correção e nova validação.
+- Empacotador Arch Linux: a versão `2.1.7` corrige a vinculação Qt com LTO por
+  meio de PIC/PIE consistente e valida o formato ELF antes de instalar.
 
 ## Plataforma e compatibilidade
 

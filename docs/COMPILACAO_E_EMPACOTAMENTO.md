@@ -14,7 +14,9 @@ empacotamento, banco de atalhos e Xvfb para os autotestes gráficos.
 | `PREFIX` | `/usr/local` | prefixo de instalação manual |
 | `DESTDIR` | vazio | raiz temporária de pacote |
 | `BUILD_DIR` | `build` | saída da compilação |
-| `CXXFLAGS` | `-O2` + avisos | opções C++17 |
+| `CXXFLAGS` | `-O2` + avisos | opções C++17 fornecidas pelo ambiente |
+| `PIC_CXXFLAGS` | `-fPIC` | PIC obrigatório em todas as unidades C++ |
+| `PIE_LDFLAGS` | `-fPIC -pie` | vínculo PIE de todos os executáveis |
 
 Alvos:
 
@@ -49,6 +51,7 @@ Com `PREFIX=/usr`, a instalação contém:
 /usr/share/doc/fix-names/README.md
 /usr/share/doc/fix-names/DOCUMENTACAO.md
 /usr/share/doc/fix-names/CHANGELOG.md
+/usr/share/doc/fix-names/VERSOES.md
 /usr/share/doc/fix-names/docs/*.md
 ```
 
@@ -87,7 +90,7 @@ Fluxo de dez etapas:
 Formato esperado:
 
 ```text
-pacotes/debian/fix-names_2.1.6-1_ARQUITETURA.deb
+pacotes/debian/fix-names_2.1.7-1_ARQUITETURA.deb
 ```
 
 O pacote inclui dependências ELF calculadas e acrescenta
@@ -96,16 +99,17 @@ para atualizar os arquivos mesmo quando a mesma revisão já está registrada.
 
 Após instalar, o script confere separadamente:
 
-- `dpkg-query` registra `2.1.6-1`;
-- `/usr/bin/fix-names --version` informa `2.1.6`;
+- `dpkg-query` registra `2.1.7-1`;
+- `/usr/bin/fix-names --version` informa `2.1.7`;
 - `/usr/bin/fix-names` pertence ao pacote;
 - `command -v fix-names` resolve, após `readlink -f`, para `/usr/bin/fix-names`.
 
 ## Empacotador Arch Linux
 
-> **Estado da versão 2.1.6:** o fluxo está implementado, mas o teste em Arch
-> real falhou ao vincular o executável Qt com as flags LTO do `makepkg`. O
-> pacote Arch desta versão ainda não deve ser considerado validado.
+> **Correção da versão 2.1.7:** todas as unidades são compiladas com `-fPIC`,
+> os executáveis são vinculados como PIE e o `PKGBUILD` mantém LTO ativo. Isso
+> corrige a `copy relocation` contra o símbolo protegido de `QWidget` observada
+> na versão `2.1.6`.
 
 Dependências instaladas automaticamente:
 
@@ -117,23 +121,25 @@ Fluxo de dez etapas:
 
 1. validar `sudo`;
 2. instalar dependências com pacman;
-3. limpar e compilar;
+3. limpar, compilar e validar PIE/ausência de `TEXTREL`;
 4. executar testes do núcleo;
 5. executar autotestes GTK e Qt em Xvfb;
 6. criar tarball-fonte local e renderizar `PKGBUILD` com SHA-256 real;
 7. gerar o pacote com `makepkg` e `PKGDEST`;
 8. identificar e preservar o pacote principal;
-9. validar identidade/conteúdo com pacman e versão do binário extraído;
+9. validar identidade/conteúdo com pacman, versão e formato ELF dos binários;
 10. instalar com `pacman -U` e conferir banco, proprietário, binário e PATH.
 
 Formato esperado:
 
 ```text
-pacotes/archlinux/fix-names-2.1.6-1-ARQUITETURA.pkg.tar.zst
+pacotes/archlinux/fix-names-2.1.7-1-ARQUITETURA.pkg.tar.zst
 ```
 
 A instalação local não usa `--needed`; isso permite reinstalar uma compilação
 da mesma revisão. O `makepkg` ignora resultados antigos por `--cleanbuild`.
+O script usa `readelf` antes do empacotamento e após extrair o pacote: CLI,
+GTK e Qt devem ser ELF do tipo `DYN` (PIE) e não podem conter `TEXTREL`.
 
 ## Migração de instalações antigas
 

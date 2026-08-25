@@ -1,4 +1,4 @@
-# fix-names 2.1.6
+# fix-names 2.1.7
 
 `fix-names` é um renomeador em massa nativo para Linux, escrito em C++17 e
 projetado para alterar nomes com pré-visualização, detecção de conflitos e sem
@@ -17,31 +17,30 @@ paleta, as fontes e as caixas de arquivo configuradas no sistema.
 
 | Item | Estado |
 | --- | --- |
-| Versão atual | `2.1.6` |
+| Versão atual | `2.1.7` |
 | Debian | programa, pacote `.deb`, instalação e atualização testados |
-| Arch Linux | empacotador incluído, mas a vinculação Qt falhou no teste real descrito abaixo |
+| Arch Linux | correção PIC/PIE para LTO incluída; pacote validado automaticamente em ambiente Arch |
 | Linguagem | C++17 e Shell POSIX |
 | Interfaces | CLI/ncurses, GTK 4, Qt 6 e seletor automático |
 | Licença | [GNU GPL v3](LICENSE) |
 
-No Arch Linux, a árvore `2.1.6` pode falhar ao vincular `fix-names-qt` quando
-as flags do `makepkg` ativam LTO e os objetos compartilhados não usam um modelo
-PIC/PIE consistente. A mensagem observada contém
-`copy relocation against protected symbol _ZTI7QWidget@@Qt_6`. Até que essa
-correção gere uma nova versão, o suporte Arch deve ser considerado pendente;
-o Debian permanece como plataforma confirmada.
+No Arch Linux, a versão `2.1.7` uniformiza `-fPIC` em todas as unidades C++ e
+vincula os executáveis explicitamente como PIE. Isso corrige a falha da
+`2.1.6`, na qual o LTO do `makepkg` combinava `core.o` sem PIC com a unidade Qt
+e produzia `copy relocation` contra o símbolo protegido de `QWidget`. O script
+Arch agora também rejeita binários que não sejam PIE ou contenham `TEXTREL`.
 
 ## Versões publicadas
 
 O histórico preserva uma revisão independente para cada versão, de `2.0.0` a
-`2.1.6`. Os links, hashes dos pacotes-fonte originais e o estado de cada
+`2.1.7`. Os links, hashes dos pacotes-fonte originais e o estado de cada
 entrega estão em [`VERSOES.md`](VERSOES.md). O histórico funcional resumido
 continua em [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Documentação completa
 
 Este README é uma apresentação rápida. A documentação oficial da versão
-`2.1.6` começa em [`DOCUMENTACAO.md`](DOCUMENTACAO.md) e está dividida por
+`2.1.7` começa em [`DOCUMENTACAO.md`](DOCUMENTACAO.md) e está dividida por
 assunto para facilitar a consulta:
 
 - [`docs/MANUAL_DO_USUARIO.md`](docs/MANUAL_DO_USUARIO.md): instalação,
@@ -64,7 +63,18 @@ assunto para facilitar a consulta:
 O histórico consolidado está em [`CHANGELOG.md`](CHANGELOG.md). A página de
 manual instalada pode ser consultada com `man fix-names`.
 
-## Correções da versão 2.1.6
+## Correção da versão 2.1.7
+
+- compila `core.o`, ncurses, GTK, Qt e testes com `-fPIC` consistente;
+- vincula todos os executáveis explicitamente com `-fPIC -pie`;
+- mantém o LTO do `makepkg` ativo no pacote Arch, em vez de ocultar a
+  incompatibilidade com `!lto`;
+- valida com `readelf` os binários compilados e os extraídos do pacote;
+- falha antes da instalação se algum ELF não for PIE ou contiver `TEXTREL`;
+- executa em automação o ciclo completo: compilar, testar, criar o
+  `.pkg.tar.zst`, instalar com pacman e confirmar a versão.
+
+## Correções preservadas da versão 2.1.6
 
 - reinstala explicitamente o pacote local mesmo se a mesma revisão já estiver
   registrada pelo gerenciador da distribuição;
@@ -227,13 +237,13 @@ O script compila, testa, cria e instala automaticamente um pacote nativo
 semelhante a:
 
 ```text
-pacotes/archlinux/fix-names-2.1.6-1-x86_64.pkg.tar.zst
+pacotes/archlinux/fix-names-2.1.7-1-x86_64.pkg.tar.zst
 ```
 
 O arquivo permanece na pasta `pacotes` e pode ser reinstalado posteriormente:
 
 ```bash
-sudo pacman -U pacotes/archlinux/fix-names-2.1.6-1-x86_64.pkg.tar.zst
+sudo pacman -U pacotes/archlinux/fix-names-2.1.7-1-x86_64.pkg.tar.zst
 ```
 
 ## Instalação no Debian
@@ -247,13 +257,13 @@ O script compila, testa, calcula automaticamente as dependências ELF, cria e
 instala automaticamente um pacote semelhante a:
 
 ```text
-pacotes/debian/fix-names_2.1.6-1_amd64.deb
+pacotes/debian/fix-names_2.1.7-1_amd64.deb
 ```
 
 Para reinstalar o arquivo já criado:
 
 ```bash
-sudo apt install --reinstall ./pacotes/debian/fix-names_2.1.6-1_amd64.deb
+sudo apt install --reinstall ./pacotes/debian/fix-names_2.1.7-1_amd64.deb
 ```
 
 Os dois instaladores devem ser executados por um usuário comum com `sudo`.
@@ -295,4 +305,5 @@ packaging/debian/control.in   metadados do pacote .deb
 instalar.sh                   detecta a distribuição e inicia a instalação
 CONTEUDO_DO_PACOTE.txt        manifesto legível da entrega
 SHA256SUMS                    integridade de todos os componentes
+.github/workflows/archlinux.yml  valida o pacote em Arch Linux
 ```

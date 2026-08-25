@@ -15,6 +15,7 @@ arquivos com os de outra versão.
 | 2.1.4 | [`release/v2.1.4`](https://github.com/mintonogueira/fix-names/tree/release/v2.1.4) | `7137102bf779094a45db41f022adfa4b811bd1094e265fd21a1ff3dacab44402` | empacotadores autossuficientes |
 | 2.1.5 | [`release/v2.1.5`](https://github.com/mintonogueira/fix-names/tree/release/v2.1.5) | `66d9ce16ed337901099d527bfe6444b244539662ad1e74fd8845256cb36fea58` | correção de `fixnames::tr()` na GUI Qt |
 | 2.1.6 | [`release/v2.1.6`](https://github.com/mintonogueira/fix-names/tree/release/v2.1.6) | `5cfd8c1bf03f15db2656a9562d841f39427f71e857ac16e20ac5fa96a3e3330d` | edição completa documentada; Debian validado |
+| 2.1.7 | [`release/v2.1.7`](https://github.com/mintonogueira/fix-names/tree/release/v2.1.7) | referência Git | corrige Qt/LTO no Arch com PIC/PIE consistente |
 
 ## Variante anterior da versão 2.1.6
 
@@ -29,6 +30,6 @@ preserva o mesmo código funcional e acrescenta a documentação completa.
 - Uma versão publicada nunca é reescrita.
 - Correções futuras recebem um novo número de versão.
 - Pacotes intermediários rejeitados ou incompletos não são versões oficiais.
-- O Debian está confirmado na `2.1.6`.
-- O suporte Arch da `2.1.6` permanece pendente por causa da falha de vinculação
-  Qt registrada na documentação.
+- O Debian está confirmado desde a `2.1.6`.
+- A falha de vinculação Qt/LTO observada no Arch na `2.1.6` foi corrigida na
+  `2.1.7`, que também verifica PIE e `TEXTREL` automaticamente.

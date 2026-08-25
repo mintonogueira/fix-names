@@ -23,6 +23,14 @@ CXXFLAGS ?= -O2
 CXXFLAGS += -std=c++17 -Wall -Wextra -Wpedantic -Wconversion -Wshadow
 LDFLAGS ?=
 
+# O Arch Linux acrescenta LTO a CXXFLAGS e LDFLAGS pelo makepkg. Com LTO, o
+# GCC combina as opções PIC/PIE de todas as unidades; misturar core.o sem PIC
+# com qt_main.o usando -fPIC pode produzir uma copy relocation proibida contra
+# símbolos protegidos do Qt. Por isso, -fPIC faz parte de TODA compilação e o
+# vínculo de TODOS os executáveis é explicitamente PIE.
+PIC_CXXFLAGS := -fPIC
+PIE_LDFLAGS := -fPIC -pie
+
 NCURSES_CFLAGS := $(shell $(PKG_CONFIG) --cflags ncursesw 2>/dev/null)
 NCURSES_LIBS := $(shell $(PKG_CONFIG) --libs ncursesw 2>/dev/null || printf '%s' '-lncursesw')
 GTK_CFLAGS := $(shell $(PKG_CONFIG) --cflags gtk4 2>/dev/null)
@@ -61,36 +69,36 @@ $(BUILD_DIR):
 	mkdir -p -- "$@"
 
 $(BUILD_DIR)/core.o: src/core.cpp $(COMMON_DEPS) | $(BUILD_DIR)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -Isrc -MMD -MP -c "$<" -o "$@"
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(PIC_CXXFLAGS) -Isrc -MMD -MP -c "$<" -o "$@"
 
 $(BUILD_DIR)/ncurses_ui.o: src/ncurses_ui.cpp src/ncurses_ui.hpp $(COMMON_DEPS) | $(BUILD_DIR)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(NCURSES_CFLAGS) -Isrc -MMD -MP -c "$<" -o "$@"
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(PIC_CXXFLAGS) $(NCURSES_CFLAGS) -Isrc -MMD -MP -c "$<" -o "$@"
 
 $(BUILD_DIR)/cli_main.o: src/cli_main.cpp src/ncurses_ui.hpp $(COMMON_DEPS) | $(BUILD_DIR)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(NCURSES_CFLAGS) -Isrc -MMD -MP -c "$<" -o "$@"
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(PIC_CXXFLAGS) $(NCURSES_CFLAGS) -Isrc -MMD -MP -c "$<" -o "$@"
 
 $(BUILD_DIR)/gtk_main.o: src/gtk_main.cpp $(COMMON_DEPS) | $(BUILD_DIR)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(GTK_CFLAGS) -Isrc -MMD -MP -c "$<" -o "$@"
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(PIC_CXXFLAGS) $(GTK_CFLAGS) -Isrc -MMD -MP -c "$<" -o "$@"
 
 $(BUILD_DIR)/qt_main.o: src/qt_main.cpp $(COMMON_DEPS) | $(BUILD_DIR)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(QT_CFLAGS) -fPIC -Isrc \
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(PIC_CXXFLAGS) $(QT_CFLAGS) -Isrc \
 		-DFIX_NAMES_ICON_PATH='"$(PREFIX)/share/pixmaps/fix-names.png"' \
 		-MMD -MP -c "$<" -o "$@"
 
 $(BUILD_DIR)/fix-names: $(BUILD_DIR)/core.o $(BUILD_DIR)/ncurses_ui.o $(BUILD_DIR)/cli_main.o
-	$(CXX) $(LDFLAGS) $^ $(NCURSES_LIBS) -o "$@"
+	$(CXX) $(LDFLAGS) $(PIE_LDFLAGS) $^ $(NCURSES_LIBS) -o "$@"
 
 $(BUILD_DIR)/fix-names-gtk: $(BUILD_DIR)/core.o $(BUILD_DIR)/gtk_main.o
-	$(CXX) $(LDFLAGS) $^ $(GTK_LIBS) -o "$@"
+	$(CXX) $(LDFLAGS) $(PIE_LDFLAGS) $^ $(GTK_LIBS) -o "$@"
 
 $(BUILD_DIR)/fix-names-qt: $(BUILD_DIR)/core.o $(BUILD_DIR)/qt_main.o
-	$(CXX) $(LDFLAGS) $^ $(QT_LIBS) -o "$@"
+	$(CXX) $(LDFLAGS) $(PIE_LDFLAGS) $^ $(QT_LIBS) -o "$@"
 
 $(BUILD_DIR)/test-core.o: tests/test_core.cpp $(COMMON_DEPS) | $(BUILD_DIR)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -Isrc -MMD -MP -c "$<" -o "$@"
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(PIC_CXXFLAGS) -Isrc -MMD -MP -c "$<" -o "$@"
 
 $(BUILD_DIR)/test-core: $(BUILD_DIR)/core.o $(BUILD_DIR)/test-core.o
-	$(CXX) $(LDFLAGS) $^ -o "$@"
+	$(CXX) $(LDFLAGS) $(PIE_LDFLAGS) $^ -o "$@"
 
 test: $(BUILD_DIR)/test-core
 	"$(BUILD_DIR)/test-core"

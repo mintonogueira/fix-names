@@ -8,7 +8,7 @@ voltada à manutenção do projeto e à criação de novas interfaces.
 Toda a API pertence a `namespace fixnames`. A constante:
 
 ```cpp
-inline constexpr const char *VERSION = "2.1.6";
+inline constexpr const char *VERSION = "2.1.7";
 ```
 
 é a fonte usada pelo programa e pelos scripts para identificar a versão.

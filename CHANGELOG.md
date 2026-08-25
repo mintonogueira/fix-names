@@ -1,8 +1,19 @@
 # Histórico do fix-names
 
-> As versões `2.0.0` a `2.1.6` estão preservadas no histórico do repositório.
+> As versões `2.0.0` a `2.1.7` estão preservadas no histórico do repositório.
 > Consulte [`VERSOES.md`](VERSOES.md) para referências e hashes dos arquivos
 > originais.
+
+## 2.1.7 — correção da compilação no Arch Linux
+
+- Compila todas as unidades C++ com `-fPIC`, sem misturar objetos PIC e não-PIC
+  durante o LTO.
+- Vincula CLI, GTK, Qt e testes explicitamente como executáveis PIE.
+- Mantém LTO habilitado no `PKGBUILD` para testar o cenário que falhava.
+- Valida com `readelf` que os binários são PIE e não possuem `TEXTREL`, tanto
+  antes do empacotamento como depois da extração do `.pkg.tar.zst`.
+- Adiciona automação em Arch Linux para compilar, testar, empacotar, instalar e
+  disponibilizar o pacote binário.
 
 ## 2.1.6 — atualização e resolução de versão
 

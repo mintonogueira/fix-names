@@ -98,5 +98,6 @@ uma interface ser ligada a uma regra diferente.
 ## Estado de validação conhecido
 
 Na versão `2.1.6`, o programa e o fluxo Debian foram confirmados pelo usuário.
-O fluxo Arch possui validações e lógica equivalentes, mas permanece pendente de
-confirmação em uma instalação Arch real.
+O teste real no Arch expôs uma inconsistência PIC/PIE durante o LTO do Qt. A
+versão `2.1.7` corrige essa regressão, adiciona validação ELF com `readelf` e
+executa o fluxo completo em uma automação baseada em Arch Linux.

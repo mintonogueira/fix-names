@@ -58,7 +58,7 @@ se não puder garantir a ausência de sobrescrita. Não substitua a chamada por
 
 ## A versão do Debian não atualizou
 
-A versão `2.1.6` corrige esse fluxo. Verifique:
+A versão `2.1.7` preserva a correção desse fluxo. Verifique:
 
 ```bash
 dpkg-query -W -f='${Version}\n' fix-names
@@ -69,8 +69,8 @@ readlink -f "$(command -v fix-names)"
 Resultados esperados:
 
 ```text
-2.1.6-1
-fix-names 2.1.6
+2.1.7-1
+fix-names 2.1.7
 /usr/bin/fix-names
 ```
 
@@ -82,28 +82,27 @@ um `backup-legado.*` na pasta `pacotes/debian/`.
 
 A falha das versões anteriores foi corrigida em `2.1.5`: mensagens internas da
 classe Qt chamam explicitamente `fixnames::tr()`, sem colisão com
-`QObject::tr()`. Extraia a versão `2.1.6` em uma pasta nova e não misture fontes
+`QObject::tr()`. Extraia a versão `2.1.7` em uma pasta nova e não misture fontes
 de versões diferentes.
 
 ## Arch: `copy relocation` envolvendo `QWidget`
 
-Na versão `2.1.6`, o teste real do gerador Arch pode chegar à vinculação de
-`fix-names-qt` e terminar com uma mensagem semelhante a:
+Na versão `2.1.6`, o teste real do gerador Arch chegava à vinculação de
+`fix-names-qt` e terminava com uma mensagem semelhante a:
 
 ```text
 copy relocation against protected symbol `_ZTI7QWidget@@Qt_6`
 ```
 
-Esse erro é diferente da colisão com `tr()` corrigida em `2.1.5`. Ele ocorre
-na combinação das flags LTO/PIC/PIE usadas durante a compilação e a vinculação
-contra o Qt 6 do Arch. Como o pacote não termina de ser criado, nada deve ser
-instalado por essa execução. Preserve a saída completa e aguarde uma versão que
-uniformize essas flags em todos os objetos compartilhados; não desative as
-proteções do linker nem force a instalação de um pacote incompleto.
+Esse erro é diferente da colisão com `tr()` corrigida em `2.1.5`. A versão
+`2.1.7` uniformiza `-fPIC` em todas as unidades que participam do LTO e vincula
+os executáveis com `-fPIC -pie`. Extraia a nova versão em uma pasta limpa e
+execute `./compilar_instalar_arch.sh`. O script interrompe antes da instalação
+se `readelf` encontrar um executável não-PIE ou qualquer `TEXTREL`.
 
 ## O script procura `scripts/verificar_projeto.sh`
 
-Essa estrutura pertence a uma entrega antiga. Na versão `2.1.6`, os geradores
+Essa estrutura pertence a uma entrega antiga. Na versão `2.1.7`, os geradores
 ficam na raiz e são autossuficientes. Se a mensagem ainda aparecer, a pasta
 mistura arquivos de versões diferentes. Extraia o pacote completo em uma pasta
 vazia.

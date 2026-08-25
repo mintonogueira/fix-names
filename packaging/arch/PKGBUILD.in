@@ -11,6 +11,7 @@ pkgdesc='Renomeador em massa seguro com CLI, ncurses, GTK 4 e Qt 6'
 arch=("$CARCH")
 depends=('glibc' 'gcc-libs' 'ncurses' 'gtk4' 'qt6-base')
 makedepends=('gcc' 'make' 'pkgconf')
+options=('lto')
 source=("fix-names-${pkgver}.tar.gz")
 sha256sums=('@SOURCE_SHA256@')
 

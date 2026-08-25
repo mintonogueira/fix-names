@@ -515,7 +515,7 @@ ARQUITETURA_VALIDADA=$(dpkg-deb -f "$PACOTE_DEB" Architecture)
 dpkg-deb --contents "$PACOTE_DEB" >/dev/null
 
 # Extrai o pacote sem instalá-lo para conferir o executável que está realmente
-# dentro do .deb. Esta validação impediria, por exemplo, metadados 2.1.6 junto de
+# dentro do .deb. Esta validação impediria, por exemplo, metadados 2.1.7 junto de
 # um binário antigo por causa de um resultado de compilação reaproveitado.
 CONTEUDO_VALIDADO=$DIRETORIO_TEMPORARIO/conteudo-validado
 mkdir -p -- "$CONTEUDO_VALIDADO"

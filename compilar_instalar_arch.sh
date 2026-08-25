@@ -33,7 +33,7 @@ umask 022
 # também a raiz do projeto, eliminando a dependência da antiga subpasta scripts/.
 # Portanto, ele pode ser chamado de qualquer diretório com:
 #
-#   /caminho/fix-names-2.1.6/compilar_instalar_arch.sh
+#   /caminho/fix-names-2.1.7/compilar_instalar_arch.sh
 DIRETORIO_PROJETO=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 DIRETORIO_DESTINO=$DIRETORIO_PROJETO/pacotes/archlinux
 
@@ -48,6 +48,27 @@ erro()
 {
     printf 'ERRO: %s\n' "$1" >&2
     exit 1
+}
+
+# Confirma que um executável ELF foi vinculado como PIE e não carrega
+# relocações de texto. Esta verificação detecta diretamente a regressão que, na
+# versão 2.1.6, fazia o LTO gerar uma copy relocation contra QWidget no Arch.
+validar_binario_pie()
+{
+    ARQUIVO_ELF=$1
+    [ -x "$ARQUIVO_ELF" ] ||
+        erro "executável ausente para validação PIE: $ARQUIVO_ELF"
+
+    TIPO_ELF=$(LC_ALL=C readelf -h -- "$ARQUIVO_ELF" 2>/dev/null |
+        awk '$1 == "Type:" { print $2; exit }')
+    [ "$TIPO_ELF" = DYN ] ||
+        erro "o executável não foi vinculado como PIE: $ARQUIVO_ELF"
+
+    if LC_ALL=C readelf -d -- "$ARQUIVO_ELF" 2>/dev/null |
+        grep -q 'TEXTREL'
+    then
+        erro "o executável contém TEXTREL: $ARQUIVO_ELF"
+    fi
 }
 
 # Encerra o Xvfb e remove somente temporários com prefixos conhecidos. O pacote
@@ -318,6 +339,9 @@ sudo pacman -S --needed --noconfirm \
     desktop-file-utils \
     xorg-server-xvfb
 
+command -v readelf >/dev/null 2>&1 ||
+    erro 'readelf não foi encontrado depois da instalação de base-devel.'
+
 JOBS=$(getconf _NPROCESSORS_ONLN 2>/dev/null || printf '1')
 case $JOBS in
     ''|*[!0-9]*|0) JOBS=1 ;;
@@ -329,6 +353,10 @@ mostrar_etapa 3 'Limpando resultados anteriores e compilando o programa completo
     make clean
     make -j "$JOBS" PREFIX=/usr all
 )
+
+for BINARIO_PIE in fix-names fix-names-gtk fix-names-qt; do
+    validar_binario_pie "$DIRETORIO_PROJETO/build/$BINARIO_PIE"
+done
 
 mostrar_etapa 4 'Executando os testes automatizados do núcleo'
 (
@@ -479,6 +507,9 @@ bsdtar -xf "$PACOTE_ARCH" -C "$CONTEUDO_VALIDADO"
 for NOME_COMANDO in fix-names fix-names-gui fix-names-gtk fix-names-qt; do
     [ -x "$CONTEUDO_VALIDADO/usr/bin/$NOME_COMANDO" ] ||
         erro "executável ausente no pacote: /usr/bin/$NOME_COMANDO"
+done
+for BINARIO_PIE in fix-names fix-names-gtk fix-names-qt; do
+    validar_binario_pie "$CONTEUDO_VALIDADO/usr/bin/$BINARIO_PIE"
 done
 VERSAO_NO_PACOTE=$("$CONTEUDO_VALIDADO/usr/bin/fix-names" --version)
 [ "$VERSAO_NO_PACOTE" = "fix-names $VERSAO" ] ||

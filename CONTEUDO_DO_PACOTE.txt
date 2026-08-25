@@ -1,4 +1,4 @@
-FIX-NAMES 2.1.6 — CONTEÚDO DA ENTREGA
+FIX-NAMES 2.1.7 — CONTEÚDO DA ENTREGA
 =====================================
 
 Este pacote contém o projeto completo necessário para compilar, testar,
@@ -45,6 +45,7 @@ ARQUIVOS PRINCIPAIS
   packaging/arch/PKGBUILD.in            modelo do pacote Arch Linux
   compilar_instalar_debian.sh           gera e instala o .deb
   compilar_instalar_arch.sh             gera e instala o .pkg.tar.zst
+  .github/workflows/archlinux.yml       valida o ciclo completo no Arch Linux
 
 Os dois geradores estão diretamente na raiz e cada um incorpora sua própria
 verificação de estrutura, integridade SHA-256, sintaxe e modelos de pacote.
@@ -54,8 +55,8 @@ A documentação Markdown é instalada junto com os pacotes em
 /usr/share/doc/fix-names/. A referência rápida continua disponível pela página
 de manual com o comando "man fix-names".
 
-CORREÇÕES PRESERVADAS E ATUALIZAÇÃO CONFIÁVEL DA VERSÃO 2.1.6
--------------------------------------
+CORREÇÃO ARCH LINUX E GARANTIAS PRESERVADAS DA VERSÃO 2.1.7
+------------------------------------------------------------
 
 CLI, ncurses, GTK e Qt exibem o percentual calculado pelo mesmo núcleo. As
 GUIs desativam todos os controles e bloqueiam o fechamento durante a operação.
@@ -72,14 +73,20 @@ fixnames::tr(). Isso impede que QMainWindow::tr() oculte a função bilíngue do
 núcleo e corrige a falha de compilação que convertia fixnames::Language para
 const char *.
 
+Todas as unidades C++ agora são compiladas com -fPIC e todos os executáveis
+são vinculados explicitamente como PIE. Essa consistência corrige a copy
+relocation contra QWidget que aparecia quando o makepkg do Arch habilitava
+LTO. O gerador Arch mantém LTO ativo e verifica com readelf se os binários
+compilados e empacotados são PIE e não contêm TEXTREL.
+
 PACOTES GERADOS
 ---------------
 
 Debian:
-  pacotes/debian/fix-names_2.1.6-1_<arquitetura>.deb
+  pacotes/debian/fix-names_2.1.7-1_<arquitetura>.deb
 
 Arch Linux:
-  pacotes/archlinux/fix-names-2.1.6-1-<arquitetura>.pkg.tar.zst
+  pacotes/archlinux/fix-names-2.1.7-1-<arquitetura>.pkg.tar.zst
 
 Cada script grava o pacote somente na pasta de sua distribuição, valida seus
 metadados e conteúdo, instala automaticamente esse mesmo arquivo pelo

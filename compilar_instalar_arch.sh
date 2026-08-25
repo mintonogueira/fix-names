@@ -7,7 +7,7 @@
 # Este script executa, em ordem, todo o ciclo nativo do Arch Linux:
 #
 #   1. confirma que está no Arch Linux ou em um derivado compatível;
-#   2. valida a integridade de todos os arquivos do projeto;
+#   2. valida por conta própria a integridade de todos os arquivos do projeto;
 #   3. instala as dependências oficiais necessárias;
 #   4. compila CLI/ncurses, GTK 4 e Qt 6 como usuário comum;
 #   5. executa os testes automatizados e os autotestes das duas GUIs;
@@ -29,10 +29,12 @@
 set -eu
 umask 022
 
-# Os caminhos são derivados da posição real do script. Desse modo, o usuário
-# pode chamá-lo a partir de qualquer diretório sem quebrar referências relativas.
-DIRETORIO_SCRIPT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-DIRETORIO_PROJETO=$(CDPATH= cd -- "$DIRETORIO_SCRIPT/.." && pwd)
+# O script fica diretamente na raiz do pacote completo. A pasta deste arquivo é
+# também a raiz do projeto, eliminando a dependência da antiga subpasta scripts/.
+# Portanto, ele pode ser chamado de qualquer diretório com:
+#
+#   /caminho/fix-names-2.1.4/compilar_instalar_arch.sh
+DIRETORIO_PROJETO=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 DIRETORIO_DESTINO=$DIRETORIO_PROJETO/pacotes/archlinux
 
 TOTAL_ETAPAS=10
@@ -103,6 +105,86 @@ mostrar_etapa()
     printf '\n[%s] %3d%% — %s\n' "$BARRA" "$PERCENTUAL" "$DESCRICAO_ETAPA"
 }
 
+# Valida localmente todo o conjunto necessário. A versão 2.1.3 chamava um
+# arquivo externo em scripts/verificar_projeto.sh; se a subpasta não estivesse
+# ao lado do instalador, a execução terminava antes de compilar. Esta função
+# incorpora a mesma proteção e torna este gerador de pacote autossuficiente.
+validar_projeto()
+{
+    ARQUIVOS_OBRIGATORIOS='
+Makefile
+README.md
+instalar.sh
+SHA256SUMS
+CONTEUDO_DO_PACOTE.txt
+compilar_instalar_arch.sh
+compilar_instalar_debian.sh
+assets/fix-names.png
+data/fix-names-gui
+data/fix-names.1
+data/fix-names.desktop
+packaging/arch/PKGBUILD.in
+packaging/debian/control.in
+src/core.cpp
+src/core.hpp
+src/cli_main.cpp
+src/ncurses_ui.cpp
+src/ncurses_ui.hpp
+src/gtk_main.cpp
+src/qt_main.cpp
+tests/test_core.cpp
+'
+
+    TOTAL_ARQUIVOS=0
+    for CAMINHO_RELATIVO in $ARQUIVOS_OBRIGATORIOS; do
+        CAMINHO_COMPLETO=$DIRETORIO_PROJETO/$CAMINHO_RELATIVO
+        [ -f "$CAMINHO_COMPLETO" ] ||
+            erro "arquivo obrigatório ausente: $CAMINHO_RELATIVO"
+        [ -s "$CAMINHO_COMPLETO" ] ||
+            erro "arquivo obrigatório vazio: $CAMINHO_RELATIVO"
+        TOTAL_ARQUIVOS=$((TOTAL_ARQUIVOS + 1))
+    done
+
+    # O manifesto detecta corrupção ou extração incompleta antes que pacman seja
+    # chamado. SHA256SUMS fica fora de sua própria lista para evitar circularidade.
+    command -v sha256sum >/dev/null 2>&1 ||
+        erro 'sha256sum não foi encontrado; instale coreutils.'
+    (
+        cd "$DIRETORIO_PROJETO"
+        sha256sum -c SHA256SUMS
+    ) >/dev/null ||
+        erro 'a verificação SHA-256 falhou; extraia novamente o pacote completo.'
+
+    # Todos os pontos de entrada devem obedecer ao Shell POSIX. A checagem ocorre
+    # antes de qualquer ação administrativa ou criação de temporários.
+    for SCRIPT_POSIX in \
+        instalar.sh \
+        compilar_instalar_arch.sh \
+        compilar_instalar_debian.sh \
+        data/fix-names-gui
+    do
+        sh -n "$DIRETORIO_PROJETO/$SCRIPT_POSIX" ||
+            erro "sintaxe Shell inválida: $SCRIPT_POSIX"
+    done
+
+    # Os marcadores são necessários para o script gerar um PKGBUILD específico
+    # da versão e com a soma real do tarball-fonte local.
+    grep -q '@VERSION@' "$DIRETORIO_PROJETO/packaging/arch/PKGBUILD.in" ||
+        erro 'marcador @VERSION@ ausente do PKGBUILD.in.'
+    grep -q '@SOURCE_SHA256@' "$DIRETORIO_PROJETO/packaging/arch/PKGBUILD.in" ||
+        erro 'marcador @SOURCE_SHA256@ ausente do PKGBUILD.in.'
+
+    # A assinatura binária impede que um arquivo truncado seja instalado como
+    # ícone do aplicativo.
+    ASSINATURA_PNG=$(dd if="$DIRETORIO_PROJETO/assets/fix-names.png" \
+        bs=8 count=1 2>/dev/null | od -An -tx1 | tr -d ' \n')
+    [ "$ASSINATURA_PNG" = '89504e470d0a1a0a' ] ||
+        erro 'assets/fix-names.png não possui uma assinatura PNG válida.'
+
+    printf 'Estrutura completa verificada: %d arquivos obrigatórios.\n' \
+        "$TOTAL_ARQUIVOS"
+}
+
 [ "$#" -eq 0 ] || erro 'este script não recebe parâmetros.'
 [ "$(id -u)" -ne 0 ] ||
     erro 'não execute este script como root; use um usuário comum com sudo.'
@@ -129,11 +211,9 @@ command -v makepkg >/dev/null 2>&1 ||
 command -v sudo >/dev/null 2>&1 ||
     erro 'sudo não está instalado ou não está disponível no PATH.'
 
-# A estrutura e os hashes são conferidos antes de qualquer instalação. Isso
-# detecta imediatamente pacote incompleto, arquivo alterado ou modelo truncado.
-[ -f "$DIRETORIO_SCRIPT/verificar_projeto.sh" ] ||
-    erro 'scripts/verificar_projeto.sh não foi encontrado; pacote incompleto.'
-sh "$DIRETORIO_SCRIPT/verificar_projeto.sh"
+# O próprio instalador confere estrutura, hashes e modelos. Nenhum arquivo da
+# antiga subpasta scripts/ é necessário para esta etapa.
+validar_projeto
 
 [ -f "$DIRETORIO_PROJETO/Makefile" ] ||
     erro "Makefile não encontrado em $DIRETORIO_PROJETO"

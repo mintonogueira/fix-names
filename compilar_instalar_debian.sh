@@ -7,7 +7,7 @@
 # Este script executa, em ordem, todo o ciclo necessário no Debian:
 #
 #   1. confirma que está em um sistema Debian ou derivado compatível;
-#   2. valida a integridade de todos os arquivos do projeto;
+#   2. valida por conta própria a integridade de todos os arquivos do projeto;
 #   3. instala as dependências de compilação e empacotamento;
 #   4. compila CLI/ncurses, GTK 4 e Qt 6 como usuário comum;
 #   5. executa os testes automatizados e os autotestes das duas GUIs;
@@ -32,10 +32,15 @@
 set -eu
 umask 022
 
-# Resolve caminhos absolutos a partir da localização deste próprio script.
-# Assim, ele funciona mesmo quando é chamado de outro diretório.
-DIRETORIO_SCRIPT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-DIRETORIO_PROJETO=$(CDPATH= cd -- "$DIRETORIO_SCRIPT/.." && pwd)
+# O script fica na raiz do pacote completo. Portanto, a pasta que contém este
+# arquivo é também a raiz do projeto. Essa decisão elimina a dependência que a
+# versão 2.1.3 tinha de uma subpasta scripts/ e permite executar exatamente:
+#
+#   ./compilar_instalar_debian.sh
+#
+# O caminho absoluto continua tornando a execução independente do diretório de
+# trabalho atual do terminal.
+DIRETORIO_PROJETO=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 DIRETORIO_DESTINO=$DIRETORIO_PROJETO/pacotes/debian
 
 TOTAL_ETAPAS=10
@@ -108,6 +113,91 @@ mostrar_etapa()
     printf '\n[%s] %3d%% — %s\n' "$BARRA" "$PERCENTUAL" "$DESCRICAO_ETAPA"
 }
 
+# Faz dentro deste próprio script a verificação que antes dependia do arquivo
+# externo scripts/verificar_projeto.sh. Assim, uma subpasta ausente nunca causa
+# a falha mostrada na versão 2.1.3. Cada componente necessário à compilação e à
+# criação do .deb precisa existir, ser um arquivo regular e não estar vazio.
+validar_projeto()
+{
+    ARQUIVOS_OBRIGATORIOS='
+Makefile
+README.md
+instalar.sh
+SHA256SUMS
+CONTEUDO_DO_PACOTE.txt
+compilar_instalar_arch.sh
+compilar_instalar_debian.sh
+assets/fix-names.png
+data/fix-names-gui
+data/fix-names.1
+data/fix-names.desktop
+packaging/arch/PKGBUILD.in
+packaging/debian/control.in
+src/core.cpp
+src/core.hpp
+src/cli_main.cpp
+src/ncurses_ui.cpp
+src/ncurses_ui.hpp
+src/gtk_main.cpp
+src/qt_main.cpp
+tests/test_core.cpp
+'
+
+    TOTAL_ARQUIVOS=0
+    for CAMINHO_RELATIVO in $ARQUIVOS_OBRIGATORIOS; do
+        CAMINHO_COMPLETO=$DIRETORIO_PROJETO/$CAMINHO_RELATIVO
+        [ -f "$CAMINHO_COMPLETO" ] ||
+            erro "arquivo obrigatório ausente: $CAMINHO_RELATIVO"
+        [ -s "$CAMINHO_COMPLETO" ] ||
+            erro "arquivo obrigatório vazio: $CAMINHO_RELATIVO"
+        TOTAL_ARQUIVOS=$((TOTAL_ARQUIVOS + 1))
+    done
+
+    # SHA256SUMS é gerado somente depois que a árvore final está pronta. A
+    # conferência detecta qualquer arquivo truncado, trocado ou corrompido. O
+    # manifesto não lista a si próprio para evitar uma dependência circular.
+    command -v sha256sum >/dev/null 2>&1 ||
+        erro 'sha256sum não foi encontrado; instale coreutils.'
+    (
+        cd "$DIRETORIO_PROJETO"
+        sha256sum -c SHA256SUMS
+    ) >/dev/null ||
+        erro 'a verificação SHA-256 falhou; extraia novamente o pacote completo.'
+
+    # Verifica a sintaxe dos três pontos de entrada Shell antes de sudo, APT ou
+    # qualquer alteração administrativa. Todos foram escritos para /bin/sh.
+    for SCRIPT_POSIX in \
+        instalar.sh \
+        compilar_instalar_arch.sh \
+        compilar_instalar_debian.sh \
+        data/fix-names-gui
+    do
+        sh -n "$DIRETORIO_PROJETO/$SCRIPT_POSIX" ||
+            erro "sintaxe Shell inválida: $SCRIPT_POSIX"
+    done
+
+    # Confere os marcadores que serão substituídos na montagem dos metadados.
+    # Um modelo parcialmente editado produziria um pacote inválido.
+    grep -q '@VERSION@' "$DIRETORIO_PROJETO/packaging/debian/control.in" ||
+        erro 'marcador @VERSION@ ausente do control.in.'
+    grep -q '@ARCHITECTURE@' "$DIRETORIO_PROJETO/packaging/debian/control.in" ||
+        erro 'marcador @ARCHITECTURE@ ausente do control.in.'
+    grep -q '@DEPENDS@' "$DIRETORIO_PROJETO/packaging/debian/control.in" ||
+        erro 'marcador @DEPENDS@ ausente do control.in.'
+    grep -q '@INSTALLED_SIZE@' "$DIRETORIO_PROJETO/packaging/debian/control.in" ||
+        erro 'marcador @INSTALLED_SIZE@ ausente do control.in.'
+
+    # A assinatura de oito bytes confirma que o ícone é realmente um PNG, não
+    # apenas um arquivo com essa extensão.
+    ASSINATURA_PNG=$(dd if="$DIRETORIO_PROJETO/assets/fix-names.png" \
+        bs=8 count=1 2>/dev/null | od -An -tx1 | tr -d ' \n')
+    [ "$ASSINATURA_PNG" = '89504e470d0a1a0a' ] ||
+        erro 'assets/fix-names.png não possui uma assinatura PNG válida.'
+
+    printf 'Estrutura completa verificada: %d arquivos obrigatórios.\n' \
+        "$TOTAL_ARQUIVOS"
+}
+
 # Impede parâmetros silenciosamente ignorados e execução integral como root.
 # A restrição mantém os artefatos de compilação pertencentes ao usuário e está
 # de acordo com a proteção do próprio aplicativo contra EUID 0.
@@ -139,11 +229,10 @@ command -v dpkg >/dev/null 2>&1 ||
 command -v sudo >/dev/null 2>&1 ||
     erro 'sudo não está instalado ou não está disponível no PATH.'
 
-# O verificador impede que uma extração incompleta comece a baixar pacotes ou
-# produzir binários. Ele também confere SHA-256, modelos e sintaxe Shell.
-[ -f "$DIRETORIO_SCRIPT/verificar_projeto.sh" ] ||
-    erro 'scripts/verificar_projeto.sh não foi encontrado; pacote incompleto.'
-sh "$DIRETORIO_SCRIPT/verificar_projeto.sh"
+# A validação é uma função local e não depende de scripts auxiliares. Ela roda
+# antes do primeiro sudo para impedir mudanças no sistema se o pacote estiver
+# incompleto ou corrompido.
+validar_projeto
 
 [ -f "$DIRETORIO_PROJETO/Makefile" ] ||
     erro "Makefile não encontrado em $DIRETORIO_PROJETO"

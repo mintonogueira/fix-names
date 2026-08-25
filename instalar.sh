@@ -7,7 +7,7 @@
 # Este arquivo é o ponto de entrada mais simples para a instalação. Ele:
 #
 #   1. impede execução como root, conforme a regra de segurança do projeto;
-#   2. verifica se todos os arquivos necessários foram extraídos;
+#   2. confirma que os dois geradores autossuficientes estão na raiz;
 #   3. identifica a distribuição por /etc/os-release;
 #   4. encaminha o processo ao gerador de pacote Debian ou Arch Linux.
 #
@@ -35,9 +35,14 @@ erro()
 [ "$(uname -s 2>/dev/null || printf desconhecido)" = Linux ] ||
     erro 'o fix-names desta entrega é destinado ao Linux.'
 
-[ -f "$DIRETORIO_PROJETO/scripts/verificar_projeto.sh" ] ||
-    erro 'scripts/verificar_projeto.sh não foi encontrado; pacote incompleto.'
-sh "$DIRETORIO_PROJETO/scripts/verificar_projeto.sh"
+# Os dois geradores ficam na raiz e incorporam suas próprias verificações de
+# estrutura, SHA-256, sintaxe e modelos. O instalador principal só precisa
+# garantir que o ponto de entrada correspondente existe; a validação completa
+# será executada pelo próprio gerador antes do primeiro uso de sudo.
+[ -f "$DIRETORIO_PROJETO/compilar_instalar_debian.sh" ] ||
+    erro 'compilar_instalar_debian.sh não foi encontrado na raiz do pacote.'
+[ -f "$DIRETORIO_PROJETO/compilar_instalar_arch.sh" ] ||
+    erro 'compilar_instalar_arch.sh não foi encontrado na raiz do pacote.'
 
 # /etc/os-release é a identificação padronizada das distribuições Linux. As
 # variáveis são carregadas somente desse arquivo fixo do sistema, nunca de um
@@ -55,11 +60,11 @@ IDENTIFICADORES=" ${ID-} ${ID_LIKE-} "
 case $IDENTIFICADORES in
     *' debian '*|*' ubuntu '*)
         printf '%s\n' 'Distribuição compatível com Debian detectada.'
-        exec sh "$DIRETORIO_PROJETO/scripts/compilar_instalar_debian.sh"
+        exec sh "$DIRETORIO_PROJETO/compilar_instalar_debian.sh"
         ;;
     *' arch '*|*' archlinux '*)
         printf '%s\n' 'Arch Linux ou derivada compatível detectada.'
-        exec sh "$DIRETORIO_PROJETO/scripts/compilar_instalar_arch.sh"
+        exec sh "$DIRETORIO_PROJETO/compilar_instalar_arch.sh"
         ;;
     *)
         erro "distribuição não suportada automaticamente (ID=${ID-}; ID_LIKE=${ID_LIKE-})."

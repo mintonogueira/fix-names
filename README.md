@@ -1,4 +1,4 @@
-# fix-names 2.1.3
+# fix-names 2.1.4
 
 `fix-names` é um renomeador em massa nativo para Linux, escrito em C++17 e
 projetado para trabalhar sem privilégios administrativos. O mesmo núcleo é
@@ -126,11 +126,11 @@ chmod +x instalar.sh
 ./instalar.sh
 ```
 
-Ele confere se a entrega contém todos os arquivos obrigatórios, detecta Debian
-ou Arch Linux e chama o empacotador apropriado. O processo sempre cria o pacote
-binário nativo antes de instalá-lo. Execute como usuário comum; `sudo` será
-usado apenas para dependências e para a instalação final pelo gerenciador da
-distribuição.
+Ele detecta Debian ou Arch Linux e chama o empacotador apropriado que está na
+raiz do projeto. Cada empacotador confere por conta própria se a entrega contém
+todos os arquivos obrigatórios. O processo sempre cria o pacote binário nativo
+antes de instalá-lo. Execute como usuário comum; `sudo` será usado apenas para
+dependências e para a instalação final pelo gerenciador da distribuição.
 
 O arquivo `SHA256SUMS` cobre todos os componentes da entrega. A verificação é
 executada automaticamente antes da compilação e também pode ser repetida com:
@@ -142,41 +142,41 @@ sha256sum -c SHA256SUMS
 ## Instalação no Arch Linux
 
 ```bash
-chmod +x scripts/compilar_instalar_arch.sh
-./scripts/compilar_instalar_arch.sh
+chmod +x compilar_instalar_arch.sh
+./compilar_instalar_arch.sh
 ```
 
 O script compila, testa, cria e instala automaticamente um pacote nativo
 semelhante a:
 
 ```text
-pacotes/archlinux/fix-names-2.1.3-1-x86_64.pkg.tar.zst
+pacotes/archlinux/fix-names-2.1.4-1-x86_64.pkg.tar.zst
 ```
 
 O arquivo permanece na pasta `pacotes` e pode ser reinstalado posteriormente:
 
 ```bash
-sudo pacman -U pacotes/archlinux/fix-names-2.1.3-1-x86_64.pkg.tar.zst
+sudo pacman -U pacotes/archlinux/fix-names-2.1.4-1-x86_64.pkg.tar.zst
 ```
 
 ## Instalação no Debian
 
 ```bash
-chmod +x scripts/compilar_instalar_debian.sh
-./scripts/compilar_instalar_debian.sh
+chmod +x compilar_instalar_debian.sh
+./compilar_instalar_debian.sh
 ```
 
 O script compila, testa, calcula automaticamente as dependências ELF, cria e
 instala automaticamente um pacote semelhante a:
 
 ```text
-pacotes/debian/fix-names_2.1.3-1_amd64.deb
+pacotes/debian/fix-names_2.1.4-1_amd64.deb
 ```
 
 Para reinstalar o arquivo já criado:
 
 ```bash
-sudo apt install ./pacotes/debian/fix-names_2.1.3-1_amd64.deb
+sudo apt install ./pacotes/debian/fix-names_2.1.4-1_amd64.deb
 ```
 
 Os dois instaladores devem ser executados por um usuário comum com `sudo`.
@@ -211,8 +211,8 @@ tests/test_core.cpp           testes puros e testes reais de arquivos
 assets/fix-names.png          ícone fornecido para o projeto
 data/fix-names-gui            seletor automático de GUI
 data/fix-names.desktop        entrada do menu de aplicativos
-scripts/compilar_instalar_*   instaladores Arch e Debian
-scripts/verificar_projeto.sh  valida se a entrega está completa
+compilar_instalar_debian.sh   gerador e instalador Debian autossuficiente
+compilar_instalar_arch.sh     gerador e instalador Arch autossuficiente
 packaging/arch/PKGBUILD.in    modelo validado para o makepkg
 packaging/debian/control.in   metadados do pacote .deb
 instalar.sh                   detecta a distribuição e inicia a instalação

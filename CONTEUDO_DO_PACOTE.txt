@@ -1,4 +1,4 @@
-FIX-NAMES 2.1.2 — CONTEÚDO DA ENTREGA
+FIX-NAMES 2.1.3 — CONTEÚDO DA ENTREGA
 =====================================
 
 Este pacote contém o projeto completo necessário para compilar, testar,
@@ -36,7 +36,7 @@ ARQUIVOS PRINCIPAIS
   scripts/compilar_instalar_debian.sh   gera e instala o .deb
   scripts/compilar_instalar_arch.sh     gera e instala o .pkg.tar.zst
 
-CORREÇÃO DE PROGRESSO DA VERSÃO 2.1.2
+CORREÇÃO DE PROGRESSO PRESERVADA NA VERSÃO 2.1.3
 -------------------------------------
 
 CLI, ncurses, GTK e Qt exibem o percentual calculado pelo mesmo núcleo. As
@@ -48,10 +48,14 @@ PACOTES GERADOS
 ---------------
 
 Debian:
-  pacotes/fix-names_2.1.2-1_<arquitetura>.deb
+  pacotes/debian/fix-names_2.1.3-1_<arquitetura>.deb
 
 Arch Linux:
-  pacotes/fix-names-2.1.2-1-<arquitetura>.pkg.tar.zst
+  pacotes/archlinux/fix-names-2.1.3-1-<arquitetura>.pkg.tar.zst
+
+Cada script grava o pacote somente na pasta de sua distribuição, valida seus
+metadados e conteúdo, instala automaticamente esse mesmo arquivo pelo
+gerenciador nativo e confirma a versão instalada antes de encerrar.
 
 EXECUÇÃO APÓS A INSTALAÇÃO
 --------------------------

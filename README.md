@@ -1,4 +1,4 @@
-# fix-names 2.1.2
+# fix-names 2.1.3
 
 `fix-names` é um renomeador em massa nativo para Linux, escrito em C++17 e
 projetado para trabalhar sem privilégios administrativos. O mesmo núcleo é
@@ -146,16 +146,17 @@ chmod +x scripts/compilar_instalar_arch.sh
 ./scripts/compilar_instalar_arch.sh
 ```
 
-O script compila, testa, cria e instala um pacote nativo semelhante a:
+O script compila, testa, cria e instala automaticamente um pacote nativo
+semelhante a:
 
 ```text
-pacotes/fix-names-2.1.2-1-x86_64.pkg.tar.zst
+pacotes/archlinux/fix-names-2.1.3-1-x86_64.pkg.tar.zst
 ```
 
 O arquivo permanece na pasta `pacotes` e pode ser reinstalado posteriormente:
 
 ```bash
-sudo pacman -U pacotes/fix-names-2.1.2-1-x86_64.pkg.tar.zst
+sudo pacman -U pacotes/archlinux/fix-names-2.1.3-1-x86_64.pkg.tar.zst
 ```
 
 ## Instalação no Debian
@@ -166,22 +167,29 @@ chmod +x scripts/compilar_instalar_debian.sh
 ```
 
 O script compila, testa, calcula automaticamente as dependências ELF, cria e
-instala um pacote semelhante a:
+instala automaticamente um pacote semelhante a:
 
 ```text
-pacotes/fix-names_2.1.2-1_amd64.deb
+pacotes/debian/fix-names_2.1.3-1_amd64.deb
 ```
 
 Para reinstalar o arquivo já criado:
 
 ```bash
-sudo apt install ./pacotes/fix-names_2.1.2-1_amd64.deb
+sudo apt install ./pacotes/debian/fix-names_2.1.3-1_amd64.deb
 ```
 
 Os dois instaladores devem ser executados por um usuário comum com `sudo`.
 Eles instalam dependências, compilam, executam testes, validam GTK/Qt em uma
-tela virtual, geram o pacote nativo e só então pedem ao gerenciador da
-distribuição que instale esse pacote em `/usr`.
+tela virtual, geram o pacote nativo na pasta exclusiva da distribuição e só
+então pedem ao gerenciador que instale exatamente o arquivo validado em `/usr`.
+
+Os destinos permanecem disponíveis depois da instalação:
+
+```text
+pacotes/debian/       pacotes .deb
+pacotes/archlinux/    pacotes .pkg.tar.zst
+```
 
 ## Compilação manual
 

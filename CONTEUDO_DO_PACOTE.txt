@@ -1,4 +1,4 @@
-FIX-NAMES 2.1.5 — CONTEÚDO DA ENTREGA
+FIX-NAMES 2.1.6 — CONTEÚDO DA ENTREGA
 =====================================
 
 Este pacote contém o projeto completo necessário para compilar, testar,
@@ -17,7 +17,17 @@ ARQUIVOS PRINCIPAIS
 -------------------
 
   Makefile                              compilação e instalação
-  README.md                             documentação completa
+  README.md                             apresentação e início rápido
+  DOCUMENTACAO.md                       índice da documentação oficial
+  CHANGELOG.md                          histórico consolidado de versões
+  docs/MANUAL_DO_USUARIO.md             operação e fluxos seguros
+  docs/REFERENCIA_CLI.md                flags, sintaxe e códigos de saída
+  docs/INTERFACES.md                    CLI, ncurses, GTK, Qt e seletor
+  docs/ARQUITETURA_E_SEGURANCA.md       algoritmo e garantias do núcleo
+  docs/REFERENCIA_DO_NUCLEO.md          API pública de src/core.hpp
+  docs/COMPILACAO_E_EMPACOTAMENTO.md   Makefile, Debian e Arch Linux
+  docs/DESENVOLVIMENTO_E_TESTES.md      fontes, testes e critérios de entrega
+  docs/SOLUCAO_DE_PROBLEMAS.md          diagnóstico das falhas conhecidas
   instalar.sh                           instalador automático
   SHA256SUMS                            verificação de integridade
   src/core.cpp e src/core.hpp           núcleo compartilhado
@@ -39,13 +49,22 @@ Os dois geradores estão diretamente na raiz e cada um incorpora sua própria
 verificação de estrutura, integridade SHA-256, sintaxe e modelos de pacote.
 Nenhum deles depende da antiga subpasta scripts/.
 
-CORREÇÕES PRESERVADAS E AJUSTE QT DA VERSÃO 2.1.5
+A documentação Markdown é instalada junto com os pacotes em
+/usr/share/doc/fix-names/. A referência rápida continua disponível pela página
+de manual com o comando "man fix-names".
+
+CORREÇÕES PRESERVADAS E ATUALIZAÇÃO CONFIÁVEL DA VERSÃO 2.1.6
 -------------------------------------
 
 CLI, ncurses, GTK e Qt exibem o percentual calculado pelo mesmo núcleo. As
 GUIs desativam todos os controles e bloqueiam o fechamento durante a operação.
 Os dois empacotadores abrem cada GUI em tela virtual e executam uma simulação
 real antes de criar o pacote binário.
+
+Os instaladores também conferem separadamente a versão declarada nos metadados,
+a versão embutida em /usr/bin/fix-names e o caminho realmente encontrado pelo
+PATH. Uma instalação antiga em /usr/local é preservada em backup e deixa de
+ocultar o executável administrado pelo dpkg ou pelo pacman.
 
 Na interface Qt, as mensagens de exceção chamam explicitamente
 fixnames::tr(). Isso impede que QMainWindow::tr() oculte a função bilíngue do
@@ -56,10 +75,10 @@ PACOTES GERADOS
 ---------------
 
 Debian:
-  pacotes/debian/fix-names_2.1.5-1_<arquitetura>.deb
+  pacotes/debian/fix-names_2.1.6-1_<arquitetura>.deb
 
 Arch Linux:
-  pacotes/archlinux/fix-names-2.1.5-1-<arquitetura>.pkg.tar.zst
+  pacotes/archlinux/fix-names-2.1.6-1-<arquitetura>.pkg.tar.zst
 
 Cada script grava o pacote somente na pasta de sua distribuição, valida seus
 metadados e conteúdo, instala automaticamente esse mesmo arquivo pelo

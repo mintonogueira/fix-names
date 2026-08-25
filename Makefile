@@ -33,6 +33,16 @@ QT_LIBS := $(shell $(PKG_CONFIG) --libs Qt6Widgets 2>/dev/null)
 COMMON_DEPS = src/core.hpp
 ALL_BINARIES = $(BUILD_DIR)/fix-names $(BUILD_DIR)/fix-names-gtk $(BUILD_DIR)/fix-names-qt
 
+# A documentação faz parte do produto instalado, não apenas do tarball-fonte.
+# Manter esta lista explícita garante que os dois pacotes nativos recebam os
+# mesmos capítulos e evita que um arquivo temporário seja incluído por um glob
+# amplo. Os caminhos relativos são preservados sob share/doc/fix-names/.
+DOC_FILES = README.md DOCUMENTACAO.md CHANGELOG.md \
+	docs/MANUAL_DO_USUARIO.md docs/REFERENCIA_CLI.md docs/INTERFACES.md \
+	docs/ARQUITETURA_E_SEGURANCA.md docs/REFERENCIA_DO_NUCLEO.md \
+	docs/COMPILACAO_E_EMPACOTAMENTO.md \
+	docs/DESENVOLVIMENTO_E_TESTES.md docs/SOLUCAO_DE_PROBLEMAS.md
+
 .PHONY: all binaries check-dependencies test install clean
 
 all: check-dependencies
@@ -93,7 +103,10 @@ install: all
 	install -D -m 0644 assets/fix-names.png "$(DESTDIR)$(PREFIX)/share/pixmaps/fix-names.png"
 	install -D -m 0644 data/fix-names.desktop "$(DESTDIR)$(PREFIX)/share/applications/fix-names.desktop"
 	install -D -m 0644 data/fix-names.1 "$(DESTDIR)$(PREFIX)/share/man/man1/fix-names.1"
-	install -D -m 0644 README.md "$(DESTDIR)$(PREFIX)/share/doc/fix-names/README.md"
+	@for document in $(DOC_FILES); do \
+		install -D -m 0644 "$$document" \
+			"$(DESTDIR)$(PREFIX)/share/doc/fix-names/$$document"; \
+	done
 
 clean:
 	@test -n "$(BUILD_DIR)" && test "$(BUILD_DIR)" != "/"

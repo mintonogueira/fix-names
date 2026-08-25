@@ -1,4 +1,4 @@
-# fix-names 2.1.5
+# fix-names 2.1.6
 
 `fix-names` é um renomeador em massa nativo para Linux, escrito em C++17 e
 projetado para trabalhar sem privilégios administrativos. O mesmo núcleo é
@@ -12,7 +12,46 @@ usado por quatro entradas independentes:
 As interfaces não aplicam estilos próprios. GTK e Qt carregam o tema, a
 paleta, as fontes e as caixas de arquivo configuradas no sistema.
 
-## Correção da versão 2.1.5
+## Documentação completa
+
+Este README é uma apresentação rápida. A documentação oficial da versão
+`2.1.6` começa em [`DOCUMENTACAO.md`](DOCUMENTACAO.md) e está dividida por
+assunto para facilitar a consulta:
+
+- [`docs/MANUAL_DO_USUARIO.md`](docs/MANUAL_DO_USUARIO.md): instalação,
+  primeiros passos, transformações e fluxos recomendados;
+- [`docs/REFERENCIA_CLI.md`](docs/REFERENCIA_CLI.md): sintaxe, todas as flags,
+  combinações, códigos de saída e exemplos;
+- [`docs/INTERFACES.md`](docs/INTERFACES.md): CLI, ncurses, GTK 4, Qt 6,
+  seletor gráfico, barra de progresso e equivalência de controles;
+- [`docs/ARQUITETURA_E_SEGURANCA.md`](docs/ARQUITETURA_E_SEGURANCA.md): desenho
+  interno, algoritmo de renomeação, conflitos, reversão e limites;
+- [`docs/REFERENCIA_DO_NUCLEO.md`](docs/REFERENCIA_DO_NUCLEO.md): tipos e API
+  pública de `src/core.hpp` para manutenção do código;
+- [`docs/COMPILACAO_E_EMPACOTAMENTO.md`](docs/COMPILACAO_E_EMPACOTAMENTO.md):
+  Makefile, dependências, `.deb`, `.pkg.tar.zst` e arquivos instalados;
+- [`docs/DESENVOLVIMENTO_E_TESTES.md`](docs/DESENVOLVIMENTO_E_TESTES.md):
+  organização dos fontes, testes, autotestes gráficos e critérios de entrega;
+- [`docs/SOLUCAO_DE_PROBLEMAS.md`](docs/SOLUCAO_DE_PROBLEMAS.md): diagnóstico
+  das falhas conhecidas e comandos de verificação.
+
+O histórico consolidado está em [`CHANGELOG.md`](CHANGELOG.md). A página de
+manual instalada pode ser consultada com `man fix-names`.
+
+## Correções da versão 2.1.6
+
+- reinstala explicitamente o pacote local mesmo se a mesma revisão já estiver
+  registrada pelo gerenciador da distribuição;
+- compara a versão declarada pelo pacote com a versão realmente embutida no
+  executável instalado em `/usr/bin/fix-names`;
+- detecta instalações manuais antigas em `/usr/local` que ocultariam o pacote
+  novo e as move para um backup recuperável dentro da pasta de destino;
+- confirma ao final tanto a versão registrada como o caminho resolvido pelo
+  comando `fix-names`;
+- o seletor gráfico e o arquivo `.desktop` usam os executáveis da mesma raiz,
+  impedindo a mistura entre versões diferentes.
+
+## Correção preservada da versão 2.1.5
 
 A interface Qt agora qualifica as mensagens do núcleo como `fixnames::tr()`.
 Isso evita a colisão com a função estática `QMainWindow::tr(const char *, ...)`
@@ -162,13 +201,13 @@ O script compila, testa, cria e instala automaticamente um pacote nativo
 semelhante a:
 
 ```text
-pacotes/archlinux/fix-names-2.1.5-1-x86_64.pkg.tar.zst
+pacotes/archlinux/fix-names-2.1.6-1-x86_64.pkg.tar.zst
 ```
 
 O arquivo permanece na pasta `pacotes` e pode ser reinstalado posteriormente:
 
 ```bash
-sudo pacman -U pacotes/archlinux/fix-names-2.1.5-1-x86_64.pkg.tar.zst
+sudo pacman -U pacotes/archlinux/fix-names-2.1.6-1-x86_64.pkg.tar.zst
 ```
 
 ## Instalação no Debian
@@ -182,13 +221,13 @@ O script compila, testa, calcula automaticamente as dependências ELF, cria e
 instala automaticamente um pacote semelhante a:
 
 ```text
-pacotes/debian/fix-names_2.1.5-1_amd64.deb
+pacotes/debian/fix-names_2.1.6-1_amd64.deb
 ```
 
 Para reinstalar o arquivo já criado:
 
 ```bash
-sudo apt install ./pacotes/debian/fix-names_2.1.5-1_amd64.deb
+sudo apt install --reinstall ./pacotes/debian/fix-names_2.1.6-1_amd64.deb
 ```
 
 Os dois instaladores devem ser executados por um usuário comum com `sudo`.

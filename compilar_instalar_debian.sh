@@ -48,6 +48,7 @@ DIRETORIO_TEMPORARIO=
 ARQUIVO_DISPLAY=
 LOG_XVFB=
 PID_XVFB=
+BACKUP_LEGADO=
 
 erro()
 {
@@ -113,6 +114,77 @@ mostrar_etapa()
     printf '\n[%s] %3d%% — %s\n' "$BARRA" "$PERCENTUAL" "$DESCRICAO_ETAPA"
 }
 
+# Instalações antigas deste projeto copiavam os arquivos diretamente para
+# /usr/local. Em Debian, /usr/local/bin normalmente aparece antes de /usr/bin no
+# PATH; por isso o dpkg podia registrar a versão nova corretamente enquanto o
+# comando "fix-names" continuava abrindo o executável antigo.
+#
+# A migração abaixo nunca apaga esses arquivos. Cada caminho legado é movido
+# para um backup dentro de pacotes/debian/ e os quatro comandos antigos recebem
+# links simbólicos para os executáveis atuais em /usr/bin. Os links também fazem
+# um terminal que tenha memorizado /usr/local/bin continuar funcionando.
+migrar_instalacao_legada()
+{
+    CAMINHOS_LEGADOS='
+/usr/local/bin/fix-names
+/usr/local/bin/fix-names-gui
+/usr/local/bin/fix-names-gtk
+/usr/local/bin/fix-names-qt
+/usr/local/share/applications/fix-names.desktop
+/usr/local/share/pixmaps/fix-names.png
+/usr/local/share/man/man1/fix-names.1
+/usr/local/share/man/man1/fix-names.1.gz
+/usr/local/share/doc/fix-names
+'
+    CAMINHOS_ENCONTRADOS=
+
+    for CAMINHO_LEGADO in $CAMINHOS_LEGADOS; do
+        [ -e "$CAMINHO_LEGADO" ] || [ -L "$CAMINHO_LEGADO" ] || continue
+
+        # Um link já direcionado ao executável do pacote é resultado de uma
+        # migração anterior, não uma cópia obsoleta a ser movida outra vez.
+        case $CAMINHO_LEGADO in
+            /usr/local/bin/*)
+                NOME_COMANDO=${CAMINHO_LEGADO##*/}
+                ALVO_REAL=$(readlink -f -- "$CAMINHO_LEGADO" 2>/dev/null || :)
+                [ "$ALVO_REAL" != "/usr/bin/$NOME_COMANDO" ] || continue
+                ;;
+        esac
+
+        CAMINHOS_ENCONTRADOS="${CAMINHOS_ENCONTRADOS}
+$CAMINHO_LEGADO"
+    done
+
+    [ -n "$CAMINHOS_ENCONTRADOS" ] || return 0
+
+    BACKUP_LEGADO=$(mktemp -d "$DIRETORIO_DESTINO/backup-legado.XXXXXX") ||
+        erro 'não foi possível criar o backup da instalação antiga.'
+
+    printf 'Instalação antiga detectada; preservando-a em: %s\n' \
+        "$BACKUP_LEGADO"
+
+    for CAMINHO_LEGADO in $CAMINHOS_ENCONTRADOS; do
+        CAMINHO_RELATIVO=${CAMINHO_LEGADO#/}
+        DESTINO_BACKUP=$BACKUP_LEGADO/$CAMINHO_RELATIVO
+        sudo mkdir -p -- "$(dirname -- "$DESTINO_BACKUP")"
+        sudo mv -- "$CAMINHO_LEGADO" "$DESTINO_BACKUP"
+    done
+
+    # Recria somente os nomes de comandos que realmente existiam na instalação
+    # antiga. Cada link aponta para um arquivo administrado pelo pacote Debian.
+    for NOME_COMANDO in fix-names fix-names-gui fix-names-gtk fix-names-qt; do
+        if [ -e "$BACKUP_LEGADO/usr/local/bin/$NOME_COMANDO" ] ||
+           [ -L "$BACKUP_LEGADO/usr/local/bin/$NOME_COMANDO" ]; then
+            sudo ln -s -- "/usr/bin/$NOME_COMANDO" \
+                "/usr/local/bin/$NOME_COMANDO"
+        fi
+    done
+
+    # O backup passa a pertencer novamente ao usuário que iniciou o script e
+    # permanece recuperável mesmo depois que os temporários forem removidos.
+    sudo chown -R "$(id -u):$(id -g)" "$BACKUP_LEGADO"
+}
+
 # Faz dentro deste próprio script a verificação que antes dependia do arquivo
 # externo scripts/verificar_projeto.sh. Assim, uma subpasta ausente nunca causa
 # a falha mostrada na versão 2.1.3. Cada componente necessário à compilação e à
@@ -122,6 +194,8 @@ validar_projeto()
     ARQUIVOS_OBRIGATORIOS='
 Makefile
 README.md
+DOCUMENTACAO.md
+CHANGELOG.md
 instalar.sh
 SHA256SUMS
 CONTEUDO_DO_PACOTE.txt
@@ -141,6 +215,14 @@ src/ncurses_ui.hpp
 src/gtk_main.cpp
 src/qt_main.cpp
 tests/test_core.cpp
+docs/MANUAL_DO_USUARIO.md
+docs/REFERENCIA_CLI.md
+docs/INTERFACES.md
+docs/ARQUITETURA_E_SEGURANCA.md
+docs/REFERENCIA_DO_NUCLEO.md
+docs/COMPILACAO_E_EMPACOTAMENTO.md
+docs/DESENVOLVIMENTO_E_TESTES.md
+docs/SOLUCAO_DE_PROBLEMAS.md
 '
 
     TOTAL_ARQUIVOS=0
@@ -432,19 +514,79 @@ ARQUITETURA_VALIDADA=$(dpkg-deb -f "$PACOTE_DEB" Architecture)
     erro "arquitetura interna inesperada no .deb: $ARQUITETURA_VALIDADA"
 dpkg-deb --contents "$PACOTE_DEB" >/dev/null
 
+# Extrai o pacote sem instalá-lo para conferir o executável que está realmente
+# dentro do .deb. Esta validação impediria, por exemplo, metadados 2.1.6 junto de
+# um binário antigo por causa de um resultado de compilação reaproveitado.
+CONTEUDO_VALIDADO=$DIRETORIO_TEMPORARIO/conteudo-validado
+mkdir -p -- "$CONTEUDO_VALIDADO"
+dpkg-deb -x "$PACOTE_DEB" "$CONTEUDO_VALIDADO"
+for NOME_COMANDO in fix-names fix-names-gui fix-names-gtk fix-names-qt; do
+    [ -x "$CONTEUDO_VALIDADO/usr/bin/$NOME_COMANDO" ] ||
+        erro "executável ausente no .deb: /usr/bin/$NOME_COMANDO"
+done
+VERSAO_NO_PACOTE=$("$CONTEUDO_VALIDADO/usr/bin/fix-names" --version)
+[ "$VERSAO_NO_PACOTE" = "fix-names $VERSAO" ] ||
+    erro "o binário dentro do .deb informa '$VERSAO_NO_PACOTE'."
+
 mostrar_etapa 10 'Instalando o pacote validado automaticamente com o APT'
 
 # Um caminho absoluto contendo / faz o APT tratar o argumento como pacote local
-# e ainda resolver qualquer dependência que não esteja instalada.
-sudo apt-get install -y "$PACOTE_DEB"
+# e ainda resolver qualquer dependência que não esteja instalada. --reinstall
+# obriga o APT a substituir os arquivos mesmo se a mesma revisão tiver sido
+# instalada antes a partir de outro .deb.
+sudo apt-get install -y --reinstall "$PACOTE_DEB"
+
+# A migração ocorre somente depois que /usr/bin já contém a versão nova. Se não
+# houver instalação manual antiga em /usr/local, esta função não altera nada.
+migrar_instalacao_legada
+
+# Atualiza o banco usado pelos menus gráficos depois de retirar um eventual
+# arquivo .desktop antigo de /usr/local/share/applications.
+sudo update-desktop-database /usr/share/applications >/dev/null 2>&1 || :
+[ ! -d /usr/local/share/applications ] ||
+    sudo update-desktop-database /usr/local/share/applications \
+        >/dev/null 2>&1 || :
 
 VERSAO_INSTALADA=$(dpkg-query -W -f='${Version}' fix-names 2>/dev/null || :)
 [ "$VERSAO_INSTALADA" = "$VERSAO_PACOTE" ] ||
     erro "a confirmação pós-instalação devolveu '$VERSAO_INSTALADA'."
 
+# O banco do dpkg, o arquivo físico instalado e a resolução pelo PATH são três
+# verificações independentes. Todas precisam apontar para a mesma versão.
+[ -x /usr/bin/fix-names ] ||
+    erro 'o pacote foi registrado, mas /usr/bin/fix-names não existe.'
+DONO_EXECUTAVEL=$(dpkg-query -S /usr/bin/fix-names 2>/dev/null || :)
+case $DONO_EXECUTAVEL in
+    fix-names:*) : ;;
+    *) erro "o dpkg não reconheceu /usr/bin/fix-names como parte do pacote." ;;
+esac
+
+VERSAO_EXECUTAVEL=$(/usr/bin/fix-names --version)
+[ "$VERSAO_EXECUTAVEL" = "fix-names $VERSAO" ] ||
+    erro "/usr/bin/fix-names informa '$VERSAO_EXECUTAVEL'."
+
+# Limpa o cache de comandos deste Shell e confere o caminho efetivamente usado
+# quando o usuário digitar apenas "fix-names". readlink -f aceita também o link
+# de compatibilidade criado em /usr/local/bin e deve chegar a /usr/bin.
+hash -r 2>/dev/null || :
+CAMINHO_RESOLVIDO=$(command -v fix-names 2>/dev/null || :)
+[ -n "$CAMINHO_RESOLVIDO" ] ||
+    erro 'o comando fix-names não foi encontrado no PATH depois da instalação.'
+CAMINHO_REAL=$(readlink -f -- "$CAMINHO_RESOLVIDO" 2>/dev/null || :)
+[ "$CAMINHO_REAL" = /usr/bin/fix-names ] ||
+    erro "o comando fix-names ainda resolve para '$CAMINHO_RESOLVIDO'."
+VERSAO_RESOLVIDA=$(fix-names --version)
+[ "$VERSAO_RESOLVIDA" = "fix-names $VERSAO" ] ||
+    erro "o comando resolvido informa '$VERSAO_RESOLVIDA'."
+
 printf '\n%s\n' 'Compilação, empacotamento e instalação concluídos com sucesso.'
 printf 'Pacote Debian preservado em: %s\n' "$PACOTE_DEB"
-printf 'Versão instalada: %s\n' "$VERSAO_INSTALADA"
+printf 'Versão registrada pelo dpkg: %s\n' "$VERSAO_INSTALADA"
+printf 'Versão do executável: %s\n' "$VERSAO_EXECUTAVEL"
+printf 'Comando resolvido para: %s -> %s\n' \
+    "$CAMINHO_RESOLVIDO" "$CAMINHO_REAL"
+[ -z "$BACKUP_LEGADO" ] ||
+    printf 'Backup da instalação antiga: %s\n' "$BACKUP_LEGADO"
 printf '%s\n' 'CLI/ncurses: fix-names'
 printf '%s\n' 'GUI automática: fix-names-gui'
 printf '%s\n' 'GUI GTK:       fix-names-gtk'

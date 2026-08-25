@@ -2,8 +2,17 @@
 
 # Seleciona a GUI mais integrada ao ambiente gráfico atual. O núcleo continua
 # sendo exatamente o mesmo; somente o conjunto de widgets muda.
+#
+# O diretório dos executáveis é calculado a partir deste próprio seletor. Assim,
+# quando /usr/bin/fix-names-gui é iniciado, GTK e Qt também são carregados de
+# /usr/bin. Isso evita que um arquivo antigo em /usr/local/bin, normalmente
+# anterior no PATH, misture componentes de duas versões diferentes.
 
 set -eu
+
+DIRETORIO_BIN=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+EXECUTAVEL_GTK=$DIRETORIO_BIN/fix-names-gtk
+EXECUTAVEL_QT=$DIRETORIO_BIN/fix-names-qt
 
 if [ "$(id -u)" -eq 0 ]; then
     printf '%s\n' 'ERRO: o fix-names nunca pode ser executado como root.' >&2
@@ -31,14 +40,14 @@ if [ -z "$INTERFACE" ]; then
     esac
 fi
 
-if [ "$INTERFACE" = qt ] && command -v fix-names-qt >/dev/null 2>&1; then
-    exec fix-names-qt "$@"
+if [ "$INTERFACE" = qt ] && [ -x "$EXECUTAVEL_QT" ]; then
+    exec "$EXECUTAVEL_QT" "$@"
 fi
-if command -v fix-names-gtk >/dev/null 2>&1; then
-    exec fix-names-gtk "$@"
+if [ -x "$EXECUTAVEL_GTK" ]; then
+    exec "$EXECUTAVEL_GTK" "$@"
 fi
-if command -v fix-names-qt >/dev/null 2>&1; then
-    exec fix-names-qt "$@"
+if [ -x "$EXECUTAVEL_QT" ]; then
+    exec "$EXECUTAVEL_QT" "$@"
 fi
 
 printf '%s\n' 'ERRO: nenhuma interface gráfica do fix-names foi encontrada.' >&2

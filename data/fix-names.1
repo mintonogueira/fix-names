@@ -1,4 +1,4 @@
-.TH FIX-NAMES 1 "August 2026" "fix-names 2.1.5" "User Commands"
+.TH FIX-NAMES 1 "August 2026" "fix-names 2.1.6" "User Commands"
 .SH NAME
 fix-names \- renomeador em massa seguro com CLI, ncurses, GTK e Qt
 .SH SYNOPSIS
@@ -72,7 +72,30 @@ Simula sem modificar arquivos.
 Executa sem confirmação.
 .TP
 .BR \-i ", " \-\-interactive
-Abre ncurses.
+Abre ncurses, opcionalmente com o caminho e as transformações já lidas.
+.TP
+.BR \-h ", " \-\-help
+Mostra a ajuda no idioma detectado.
+.TP
+.BR \-V ", " \-\-version
+Mostra a versão incorporada no executável.
+.TP
+.B \-\-
+Encerra a interpretação de opções. Use antes de um caminho iniciado por hífen.
+.SH TRANSFORMATION ORDER
+Quando mais de uma transformação é ativada, o núcleo aplica: remoção de
+acentos; localizar/substituir; inserir/sobrescrever; substituição de espaços;
+substituição de sublinhados; e capitalização. Em arquivos e links, a extensão
+protegida é separada antes dessas etapas e recolocada byte por byte no final.
+.SH SAFETY
+O programa exige ao menos uma transformação, bloqueia o alvo raiz /, não segue
+links simbólicos e protege o próprio executável. Colisões preservam todos os
+itens envolvidos. A renomeação usa renameat2 com RENAME_NOREPLACE e uma fase
+temporária por diretório; não recua para uma operação que possa sobrescrever.
+.PP
+Exclusões relativas são resolvidas a partir da pasta-alvo. Excluir uma pasta
+protege também todo o seu conteúdo. O diretório-base escolhido não tem seu
+próprio nome alterado.
 .SH GRAPHICAL INTERFACES
 .B fix-names-gui
 seleciona GTK em ambientes GTK e Qt em KDE/LXQt. Use
@@ -80,5 +103,41 @@ seleciona GTK em ambientes GTK e Qt em KDE/LXQt. Use
 ou
 .B fix-names-gui --qt
 para escolher manualmente.
+.SH EXIT STATUS
+.TP
+.B 0
+Sucesso, ajuda/versão exibida ou cancelamento confirmado pelo usuário.
+.TP
+.B 1
+Erro operacional, conflito ou resultado do núcleo sem sucesso.
+.TP
+.B 2
+Erro de sintaxe, combinação de flags ou validação feita pela CLI.
+.TP
+.B 77
+Execução recusada porque o usuário efetivo é root.
+.SH EXAMPLES
+.PP
+Simular minúsculas, remoção de acentos e hífens no lugar de espaços:
+.PP
+.B fix-names --lowercase --remove-accents --spaces=- --dry-run ~/Documentos
+.PP
+Aplicar recursivamente com uma exclusão:
+.PP
+.B fix-names --uppercase --recursive --exclude manter.txt --yes ~/Imagens
+.SH FILES
+.TP
+.I /usr/share/doc/fix-names/DOCUMENTACAO.md
+Índice da documentação completa.
+.TP
+.I /usr/share/doc/fix-names/docs/
+Manuais de usuário, interfaces, arquitetura, empacotamento, testes e diagnóstico.
+.TP
+.I /usr/share/applications/fix-names.desktop
+Entrada e ações GTK/Qt do menu de aplicativos.
+.SH LIMITATIONS
+Específico para Linux. A busca é literal, sem expressões regulares. Não existe
+desfazer persistente depois de uma execução concluída; a reversão automática
+se limita a uma falha durante o lote atual.
 .SH AUTHOR
 Projeto fix-names.

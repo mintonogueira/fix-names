@@ -17,7 +17,7 @@
 
 namespace fixnames {
 
-inline constexpr const char *VERSION = "2.1.5";
+inline constexpr const char *VERSION = "2.1.6";
 
 enum class Language {
     English,

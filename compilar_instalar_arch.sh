@@ -33,7 +33,7 @@ umask 022
 # também a raiz do projeto, eliminando a dependência da antiga subpasta scripts/.
 # Portanto, ele pode ser chamado de qualquer diretório com:
 #
-#   /caminho/fix-names-2.1.5/compilar_instalar_arch.sh
+#   /caminho/fix-names-2.1.6/compilar_instalar_arch.sh
 DIRETORIO_PROJETO=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 DIRETORIO_DESTINO=$DIRETORIO_PROJETO/pacotes/archlinux
 
@@ -42,6 +42,7 @@ DIRETORIO_TEMPORARIO=
 ARQUIVO_DISPLAY=
 LOG_XVFB=
 PID_XVFB=
+BACKUP_LEGADO=
 
 erro()
 {
@@ -105,6 +106,66 @@ mostrar_etapa()
     printf '\n[%s] %3d%% — %s\n' "$BARRA" "$PERCENTUAL" "$DESCRICAO_ETAPA"
 }
 
+# Versões antigas dos instaladores copiavam diretamente para /usr/local. Como
+# esse diretório costuma vir antes de /usr/bin no PATH, o pacman podia registrar
+# o pacote novo enquanto o comando executado continuava sendo o arquivo antigo.
+#
+# Todos os caminhos encontrados são movidos para um backup recuperável dentro
+# de pacotes/archlinux/. Os quatro comandos antigos recebem links para /usr/bin,
+# inclusive para atender terminais que ainda tenham /usr/local/bin memorizado.
+migrar_instalacao_legada()
+{
+    CAMINHOS_LEGADOS='
+/usr/local/bin/fix-names
+/usr/local/bin/fix-names-gui
+/usr/local/bin/fix-names-gtk
+/usr/local/bin/fix-names-qt
+/usr/local/share/applications/fix-names.desktop
+/usr/local/share/pixmaps/fix-names.png
+/usr/local/share/man/man1/fix-names.1
+/usr/local/share/man/man1/fix-names.1.gz
+/usr/local/share/doc/fix-names
+'
+    CAMINHOS_ENCONTRADOS=
+
+    for CAMINHO_LEGADO in $CAMINHOS_LEGADOS; do
+        [ -e "$CAMINHO_LEGADO" ] || [ -L "$CAMINHO_LEGADO" ] || continue
+        case $CAMINHO_LEGADO in
+            /usr/local/bin/*)
+                NOME_COMANDO=${CAMINHO_LEGADO##*/}
+                ALVO_REAL=$(readlink -f -- "$CAMINHO_LEGADO" 2>/dev/null || :)
+                [ "$ALVO_REAL" != "/usr/bin/$NOME_COMANDO" ] || continue
+                ;;
+        esac
+        CAMINHOS_ENCONTRADOS="${CAMINHOS_ENCONTRADOS}
+$CAMINHO_LEGADO"
+    done
+
+    [ -n "$CAMINHOS_ENCONTRADOS" ] || return 0
+
+    BACKUP_LEGADO=$(mktemp -d "$DIRETORIO_DESTINO/backup-legado.XXXXXX") ||
+        erro 'não foi possível criar o backup da instalação antiga.'
+    printf 'Instalação antiga detectada; preservando-a em: %s\n' \
+        "$BACKUP_LEGADO"
+
+    for CAMINHO_LEGADO in $CAMINHOS_ENCONTRADOS; do
+        CAMINHO_RELATIVO=${CAMINHO_LEGADO#/}
+        DESTINO_BACKUP=$BACKUP_LEGADO/$CAMINHO_RELATIVO
+        sudo mkdir -p -- "$(dirname -- "$DESTINO_BACKUP")"
+        sudo mv -- "$CAMINHO_LEGADO" "$DESTINO_BACKUP"
+    done
+
+    for NOME_COMANDO in fix-names fix-names-gui fix-names-gtk fix-names-qt; do
+        if [ -e "$BACKUP_LEGADO/usr/local/bin/$NOME_COMANDO" ] ||
+           [ -L "$BACKUP_LEGADO/usr/local/bin/$NOME_COMANDO" ]; then
+            sudo ln -s -- "/usr/bin/$NOME_COMANDO" \
+                "/usr/local/bin/$NOME_COMANDO"
+        fi
+    done
+
+    sudo chown -R "$(id -u):$(id -g)" "$BACKUP_LEGADO"
+}
+
 # Valida localmente todo o conjunto necessário. A versão 2.1.3 chamava um
 # arquivo externo em scripts/verificar_projeto.sh; se a subpasta não estivesse
 # ao lado do instalador, a execução terminava antes de compilar. Esta função
@@ -114,6 +175,8 @@ validar_projeto()
     ARQUIVOS_OBRIGATORIOS='
 Makefile
 README.md
+DOCUMENTACAO.md
+CHANGELOG.md
 instalar.sh
 SHA256SUMS
 CONTEUDO_DO_PACOTE.txt
@@ -133,6 +196,14 @@ src/ncurses_ui.hpp
 src/gtk_main.cpp
 src/qt_main.cpp
 tests/test_core.cpp
+docs/MANUAL_DO_USUARIO.md
+docs/REFERENCIA_CLI.md
+docs/INTERFACES.md
+docs/ARQUITETURA_E_SEGURANCA.md
+docs/REFERENCIA_DO_NUCLEO.md
+docs/COMPILACAO_E_EMPACOTAMENTO.md
+docs/DESENVOLVIMENTO_E_TESTES.md
+docs/SOLUCAO_DE_PROBLEMAS.md
 '
 
     TOTAL_ARQUIVOS=0
@@ -208,6 +279,8 @@ command -v pacman >/dev/null 2>&1 ||
     erro 'pacman não foi encontrado.'
 command -v makepkg >/dev/null 2>&1 ||
     erro 'makepkg não foi encontrado; instale base-devel.'
+command -v bsdtar >/dev/null 2>&1 ||
+    erro 'bsdtar não foi encontrado; instale libarchive.'
 command -v sudo >/dev/null 2>&1 ||
     erro 'sudo não está instalado ou não está disponível no PATH.'
 
@@ -398,16 +471,64 @@ case $IDENTIDADE_PACOTE in
 esac
 pacman -Qlp "$PACOTE_ARCH" >/dev/null
 
+# Extrai o pacote em uma pasta temporária e consulta o próprio binário. Assim,
+# a versão declarada pelo PKGBUILD não pode divergir do programa compilado.
+CONTEUDO_VALIDADO=$DIRETORIO_TEMPORARIO/conteudo-validado
+mkdir -p -- "$CONTEUDO_VALIDADO"
+bsdtar -xf "$PACOTE_ARCH" -C "$CONTEUDO_VALIDADO"
+for NOME_COMANDO in fix-names fix-names-gui fix-names-gtk fix-names-qt; do
+    [ -x "$CONTEUDO_VALIDADO/usr/bin/$NOME_COMANDO" ] ||
+        erro "executável ausente no pacote: /usr/bin/$NOME_COMANDO"
+done
+VERSAO_NO_PACOTE=$("$CONTEUDO_VALIDADO/usr/bin/fix-names" --version)
+[ "$VERSAO_NO_PACOTE" = "fix-names $VERSAO" ] ||
+    erro "o binário dentro do pacote informa '$VERSAO_NO_PACOTE'."
+
 mostrar_etapa 10 'Instalando o pacote validado automaticamente com pacman -U'
-sudo pacman -U --needed --noconfirm "$PACOTE_ARCH"
+
+# Não se usa --needed aqui: ao reconstruir a mesma revisão, o pacman precisa
+# reinstalar o arquivo local em vez de ignorá-lo como já presente.
+sudo pacman -U --noconfirm "$PACOTE_ARCH"
+
+migrar_instalacao_legada
+sudo update-desktop-database /usr/share/applications >/dev/null 2>&1 || :
+[ ! -d /usr/local/share/applications ] ||
+    sudo update-desktop-database /usr/local/share/applications \
+        >/dev/null 2>&1 || :
 
 VERSAO_INSTALADA=$(pacman -Q fix-names 2>/dev/null | awk '{print $2}' || :)
 [ "$VERSAO_INSTALADA" = "$VERSAO_PACOTE" ] ||
     erro "a confirmação pós-instalação devolveu '$VERSAO_INSTALADA'."
 
+[ -x /usr/bin/fix-names ] ||
+    erro 'o pacote foi registrado, mas /usr/bin/fix-names não existe.'
+DONO_EXECUTAVEL=$(pacman -Qoq /usr/bin/fix-names 2>/dev/null || :)
+[ "$DONO_EXECUTAVEL" = fix-names ] ||
+    erro "o pacman não reconheceu /usr/bin/fix-names como parte do pacote."
+
+VERSAO_EXECUTAVEL=$(/usr/bin/fix-names --version)
+[ "$VERSAO_EXECUTAVEL" = "fix-names $VERSAO" ] ||
+    erro "/usr/bin/fix-names informa '$VERSAO_EXECUTAVEL'."
+
+hash -r 2>/dev/null || :
+CAMINHO_RESOLVIDO=$(command -v fix-names 2>/dev/null || :)
+[ -n "$CAMINHO_RESOLVIDO" ] ||
+    erro 'o comando fix-names não foi encontrado no PATH depois da instalação.'
+CAMINHO_REAL=$(readlink -f -- "$CAMINHO_RESOLVIDO" 2>/dev/null || :)
+[ "$CAMINHO_REAL" = /usr/bin/fix-names ] ||
+    erro "o comando fix-names ainda resolve para '$CAMINHO_RESOLVIDO'."
+VERSAO_RESOLVIDA=$(fix-names --version)
+[ "$VERSAO_RESOLVIDA" = "fix-names $VERSAO" ] ||
+    erro "o comando resolvido informa '$VERSAO_RESOLVIDA'."
+
 printf '\n%s\n' 'Compilação, empacotamento e instalação concluídos com sucesso.'
 printf 'Pacote Arch Linux preservado em: %s\n' "$PACOTE_ARCH"
-printf 'Versão instalada: %s\n' "$VERSAO_INSTALADA"
+printf 'Versão registrada pelo pacman: %s\n' "$VERSAO_INSTALADA"
+printf 'Versão do executável: %s\n' "$VERSAO_EXECUTAVEL"
+printf 'Comando resolvido para: %s -> %s\n' \
+    "$CAMINHO_RESOLVIDO" "$CAMINHO_REAL"
+[ -z "$BACKUP_LEGADO" ] ||
+    printf 'Backup da instalação antiga: %s\n' "$BACKUP_LEGADO"
 printf '%s\n' 'CLI/ncurses: fix-names'
 printf '%s\n' 'GUI automática: fix-names-gui'
 printf '%s\n' 'GUI GTK:       fix-names-gtk'

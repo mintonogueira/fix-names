@@ -5,8 +5,10 @@ Name=fix-names
 Name[pt_BR]=fix-names
 Comment=Safely rename files in bulk
 Comment[pt_BR]=Renomeie arquivos em massa com segurança
-Exec=fix-names-gui %f
-TryExec=fix-names-gui
+# Usa o caminho administrado pelo pacote. Isso impede que uma instalação
+# manual antiga em /usr/local/bin seja aberta pelo menu no lugar desta versão.
+Exec=/usr/bin/fix-names-gui %f
+TryExec=/usr/bin/fix-names-gui
 Icon=fix-names
 Terminal=false
 Categories=Utility;FileTools;
@@ -17,9 +19,9 @@ Actions=GTK;Qt;
 [Desktop Action GTK]
 Name=Open with GTK
 Name[pt_BR]=Abrir com GTK
-Exec=fix-names-gui --gtk
+Exec=/usr/bin/fix-names-gui --gtk
 
 [Desktop Action Qt]
 Name=Open with Qt
 Name[pt_BR]=Abrir com Qt
-Exec=fix-names-gui --qt
+Exec=/usr/bin/fix-names-gui --qt
